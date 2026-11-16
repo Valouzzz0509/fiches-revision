@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mes fiches de révision</title>
+<style>
+:root{--bg:#faf7f2;--card:#fff;--ink:#2a2530;--mute:#7a7285;--acc:#7c5cff;--acc2:#ffe9a8;--ok:#2f9e6b;--ko:#d9534f;--line:#e8e2d8;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17141c;--card:#221e2b;--ink:#f1ecf7;--mute:#a79fb5;--acc:#a48dff;--acc2:#4a3f1f;--line:#3a3348;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#17141c;--card:#221e2b;--ink:#f1ecf7;--mute:#a79fb5;--acc:#a48dff;--acc2:#4a3f1f;--line:#3a3348;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:760px;margin:0 auto;padding:20px 16px 60px}
+h1{font-size:1.7rem;margin:.2em 0 .1em}
+.sub{color:var(--mute);margin:0 0 18px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px}
+label{font-weight:600;font-size:.9rem;display:block;margin-bottom:6px}
+textarea,input,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px}
+textarea{min-height:170px;resize:vertical}
+.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+.row>*{flex:1 1 140px}
+button{font:inherit;font-weight:600;border:0;border-radius:12px;padding:11px 16px;cursor:pointer;background:var(--acc);color:#fff}
+button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)}
+button:disabled{opacity:.5;cursor:wait}
+.tabs{display:flex;gap:6px;margin:6px 0 14px;overflow-x:auto}
+.tabs button{background:var(--card);color:var(--ink);border:1px solid var(--line);flex:0 0 auto}
+.tabs button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
+.fiche h2{font-size:1.25rem;margin:0 0 4px}
+.fiche h3{font-size:1.02rem;margin:18px 0 4px;color:var(--acc)}
+.fiche ul{margin:4px 0;padding-left:20px}
+.kw{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.kw span{background:var(--acc2);padding:3px 10px;border-radius:99px;font-size:.88rem}
+.flash{perspective:900px;margin:10px 0}
+.face{min-height:190px;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:1.2rem;border-radius:18px;border:2px solid var(--line);background:var(--card);cursor:pointer;user-select:none}
+.face.back{background:var(--acc2);border-color:var(--acc)}
+.prog{height:8px;background:var(--line);border-radius:9px;overflow:hidden;margin:6px 0 10px}
+.prog i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
+.meta{color:var(--mute);font-size:.9rem;display:flex;justify-content:space-between}
+.ok{background:var(--ok)}.ko{background:var(--ko)}
+.opt{display:block;width:100%;text-align:left;background:var(--card);color:var(--ink);border:1px solid var(--line);margin:6px 0}
+.opt.good{background:var(--ok);color:#fff}.opt.bad{background:var(--ko);color:#fff}
+.hist button{background:var(--card);color:var(--ink);border:1px solid var(--line);margin:0 6px 6px 0;padding:6px 12px;font-weight:500}
+.err{color:var(--ko);margin-top:8px}
+.hide{display:none}
+</style>
+</head>
+<body>
+<main>
+  <h1>📚 Mes fiches de révision</h1>
+  <p class="sub">Prends ton cours en photo, l’IA fait la fiche et les cartes. Ensuite, tu révises en t’entraînant.</p>
+
+  <section class="card" id="inp">
+    <label>Ton cours en photo</label>
+    <input type="file" id="pic" accept="image/*" multiple class="hide">
+    <div class="row"><button class="ghost" id="snap" type="button">📷 Prendre / choisir des photos</button></div>
+    <div id="thumbs" class="kw" style="margin-top:10px"></div>
+    <label for="txt" style="margin-top:14px">Ou colle ton cours en texte (facultatif)</label>
+    <textarea id="txt" style="min-height:90px" placeholder="Tu peux aussi coller du texte ici…"></textarea>
+    <div class="row">
+      <div><label for="mat">Matière</label><input id="mat" placeholder="Ex : Histoire, Bio, Droit…"></div>
+      <div><label for="niv">Niveau</label>
+        <select id="niv"><option>Collège</option><option>Lycée</option><option selected>Études supérieures</option></select></div>
+    </div>
+    <div class="row"><div><label for="code">Code d’accès</label><input id="code" type="password" placeholder="Code donné par le créateur du site"></div></div>
+    <div class="row"><button id="go">✨ Générer ma fiche</button></div>
+    <div class="err" id="err"></div>
+    <div class="hist" id="hist" style="margin-top:14px"></div>
+  </section>
+
+  <section id="res" class="hide">
+    <div class="tabs" id="tabs">
+      <button data-t="fiche" class="on">📝 Fiche</button>
+      <button data-t="cards">🃏 Cartes</button>
+      <button data-t="quiz">🎯 Quiz</button>
+    </div>
+    <div id="fiche" class="card fiche"></div>
+    <div id="cards" class="hide"></div>
+    <div id="quiz" class="hide"></div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+let deck = null, queue = [], known = 0, flipped = false, qi = 0, score = 0;
+
+function store(){ try{ return JSON.parse(localStorage.getItem('fiches')||'[]') }catch(e){ return [] } }
+function save(d){ try{ const l=store().filter(x=>x.title!==d.title); l.unshift(d); localStorage.setItem('fiches',JSON.stringify(l.slice(0,12))) }catch(e){} renderHist(); }
+function renderHist(){
+  const h=$('hist'); h.textContent='';
+  const l=store(); if(!l.length) return;
+  const t=document.createElement('label'); t.textContent='Mes fiches enregistrées'; h.appendChild(t);
+  l.forEach(d=>{ const b=document.createElement('button'); b.textContent=d.title; b.onclick=()=>show(d); h.appendChild(b); });
+}
+function el(tag,txt,cls){ const e=document.createElement(tag); if(txt!=null) e.textContent=txt; if(cls) e.className=cls; return e; }
+
+let photos=[];
+function b64(bl){return new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(',')[1]);f.readAsDataURL(bl)})}
+try{window.addEventListener('DOMContentLoaded',()=>{$('code').value=localStorage.getItem('code')||''})}catch(e){}
+async function shrink(file){
+  const bm=await createImageBitmap(file); const k=Math.min(1,1400/Math.max(bm.width,bm.height));
+  const cv=document.createElement('canvas'); cv.width=Math.round(bm.width*k); cv.height=Math.round(bm.height*k);
+  cv.getContext('2d').drawImage(bm,0,0,cv.width,cv.height);
+  return new Promise(r=>cv.toBlob(r,'image/jpeg',0.7));
+}
+function drawThumbs(){
+  const t=$('thumbs'); t.textContent='';
+  photos.forEach((p,i)=>{ const s=el('span','📄 Page '+(i+1)+' ✕'); s.style.cursor='pointer'; s.onclick=()=>{photos.splice(i,1);drawThumbs()}; t.appendChild(s); });
+}
+$('snap').onclick=()=>$('pic').click();
+$('pic').onchange=async e=>{
+  $('err').textContent='';
+  for(const f of e.target.files){
+    if(photos.length>=5){ $('err').textContent='5 photos maximum par fiche.'; break; }
+    try{ photos.push(await shrink(f)); }catch(x){ $('err').textContent='Impossible de lire une des photos.'; }
+  }
+  e.target.value=''; drawThumbs();
+};
+
+$('go').onclick = async () => {
+  const text = $('txt').value.trim();
+  $('err').textContent='';
+  if(!photos.length && text.length<80){ $('err').textContent='Ajoute une photo de ton cours (ou colle un peu de texte).'; return; }
+  const btn=$('go'); btn.disabled=true; btn.textContent='L’IA travaille…';
+  try{
+    const code=$('code').value.trim();
+    try{localStorage.setItem('code',code)}catch(x){}
+    const imgs=await Promise.all(photos.map(b64));
+    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text:text.slice(0,12000),images:imgs,matiere:$('mat').value,niveau:$('niv').value,code})});
+    const d=await r.json().catch(()=>({error:'Réponse invalide du serveur.'}));
+    if(!r.ok) throw new Error(d.error||'Erreur serveur');
+    if(!d || !d.sections || !d.cards) throw new Error('Réponse inattendue, réessaie.');
+    save(d); show(d);
+  }catch(e){
+    $('err').textContent = (e && e.code==='not_granted') ? 'Autorisation refusée : accepte l’accès à Claude pour générer la fiche.' : (e && e.message) || 'Erreur, réessaie.';
+  }
+  btn.disabled=false; btn.textContent='✨ Générer ma fiche';
+};
+
+function show(d){
+  deck=d; $('res').classList.remove('hide');
+  const f=$('fiche'); f.textContent='';
+  f.appendChild(el('h2',d.title));
+  (d.sections||[]).forEach(s=>{
+    f.appendChild(el('h3',s.heading));
+    const ul=el('ul'); (s.points||[]).forEach(p=>ul.appendChild(el('li',p))); f.appendChild(ul);
+  });
+  if(d.keywords&&d.keywords.length){ f.appendChild(el('h3','Mots-clés')); const k=el('div',null,'kw'); d.keywords.forEach(w=>k.appendChild(el('span',w))); f.appendChild(k); }
+  startCards(); startQuiz(); tab('fiche');
+  $('res').scrollIntoView({behavior:'smooth'});
+}
+
+function tab(t){
+  ['fiche','cards','quiz'].forEach(x=>{ $(x).classList.toggle('hide',x!==t); });
+  document.querySelectorAll('#tabs button').forEach(b=>b.classList.toggle('on',b.dataset.t===t));
+}
+$('tabs').onclick = e => { if(e.target.dataset.t) tab(e.target.dataset.t); };
+
+function shuffle(a){ a=a.slice(); for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]} return a; }
+
+function startCards(){ queue=shuffle(deck.cards||[]); known=0; flipped=false; drawCard(); }
+function drawCard(){
+  const c=$('cards'); c.textContent='';
+  const total=(deck.cards||[]).length;
+  if(!queue.length){
+    const box=el('div',null,'card'); box.appendChild(el('h2','🎉 Bravo !'));
+    box.appendChild(el('p','Tu as passé toutes les cartes. Recommence pour consolider.'));
+    const b=el('button','Recommencer'); b.onclick=startCards; box.appendChild(b); c.appendChild(box); return;
+  }
+  const m=el('div',null,'meta'); m.appendChild(el('span',`${known} / ${total} sues`)); m.appendChild(el('span',`${queue.length} restantes`)); c.appendChild(m);
+  const p=el('div',null,'prog'); const i=el('i'); i.style.width=(total?known/total*100:0)+'%'; p.appendChild(i); c.appendChild(p);
+  const fl=el('div',null,'flash'); const face=el('div',queue[0].q,'face'); fl.appendChild(face); c.appendChild(fl);
+  c.appendChild(el('p','Touche la carte pour voir la réponse',null)).style.cssText='text-align:center;color:var(--mute);font-size:.9rem';
+  const r=el('div',null,'row'); r.classList.add('hide');
+  const ko=el('button','🔁 À revoir','ko'), ok=el('button','✅ Je savais','ok');
+  ko.onclick=()=>{ queue.push(queue.shift()); flipped=false; drawCard(); };
+  ok.onclick=()=>{ queue.shift(); known++; flipped=false; drawCard(); };
+  r.append(ko,ok); c.appendChild(r);
+  face.onclick=()=>{ flipped=!flipped; face.textContent=flipped?queue[0].a:queue[0].q; face.classList.toggle('back',flipped); r.classList.toggle('hide',!flipped); };
+}
+
+function startQuiz(){ qi=0; score=0; drawQ(); }
+function drawQ(){
+  const c=$('quiz'); c.textContent=''; const qs=deck.quiz||[];
+  if(!qs.length){ c.appendChild(el('div','Pas de quiz pour cette fiche.','card')); return; }
+  if(qi>=qs.length){
+    const box=el('div',null,'card'); box.appendChild(el('h2',`Score : ${score} / ${qs.length}`));
+    const b=el('button','Refaire le quiz'); b.onclick=startQuiz; box.appendChild(b); c.appendChild(box); return;
+  }
+  const q=qs[qi], box=el('div',null,'card');
+  box.appendChild(el('div',`Question ${qi+1} / ${qs.length}`,'meta'));
+  box.appendChild(el('h3',q.q)).style.margin='8px 0';
+  const fb=el('p',''); let done=false;
+  const opts=[];
+  q.options.forEach((o,i)=>{
+    const b=el('button',o,'opt'); opts.push(b);
+    b.onclick=()=>{ if(done) return; done=true;
+      if(i===q.answer){score++; b.classList.add('good'); fb.textContent='✅ Exact ! '+(q.why||'');}
+      else{ b.classList.add('bad'); opts[q.answer].classList.add('good'); fb.textContent='❌ Pas tout à fait. '+(q.why||''); }
+      const n=el('button','Suivant →'); n.onclick=()=>{qi++;drawQ()}; box.appendChild(n); };
+    box.appendChild(b);
+  });
+  box.appendChild(fb); c.appendChild(box);
+}
+
+renderHist();
+</script>
+</body>
+</html>
