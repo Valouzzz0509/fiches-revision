@@ -70,6 +70,38 @@ button.ok{background:var(--ok);color:#fff}button.ko{background:var(--ko);color:#
 .err{color:var(--ko);font-weight:600;line-height:1.4;margin-top:12px}
 .hide{display:none}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.fh{margin:-6px 0 12px}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:6px}
+.chips span{font-size:.85rem;font-weight:700;line-height:26px;padding:0 12px;border-radius:99px;background:var(--acc);color:var(--accink)}
+.chips span:not(:first-child){background:transparent;color:var(--mute);border:1.5px solid var(--grid)}
+.fiche h2{font-size:clamp(1.8rem,6vw,2.4rem);line-height:1.15;margin:4px 0 6px}
+.kwbox{background:var(--postit);border-radius:6px;padding:12px 16px 14px;margin:14px 0 20px;line-height:1.4;transform:rotate(-.4deg);box-shadow:0 12px 22px -16px rgba(27,37,89,.7)}
+.kwbox strong{display:block;font-family:Caveat,cursive;font-size:1.4rem;margin-bottom:6px}
+.kwbox .kw span{background:var(--sheet);border:1.5px solid var(--ink)}
+.sec{--c:var(--bl);margin:0 0 18px;padding:2px 0 4px 16px;border-left:6px solid var(--c);border-radius:3px}
+.sec.c1{--c:var(--pk)}.sec.c2{--c:var(--hl)}.sec.c3{--c:#9be3b8}
+.sec h3{margin:0 0 2px;font-size:1.15rem;padding:0 .35em 0 .1em;background:linear-gradient(transparent 50%,var(--c) 50%,var(--c) 92%,transparent 92%)}
+.sec ul{margin:4px 0 0;padding-left:18px}
+.sec li{line-height:1.5;margin:0 0 6px;padding-left:2px}
+.dl{display:flex;gap:10px;flex-wrap:wrap;margin-top:26px;border-top:2px dashed var(--grid);padding-top:18px;line-height:1.3}
+.dl button{flex:1 1 200px}
+button.ghost{background:transparent;color:var(--acc);border:2px solid var(--acc)}
+#pr{display:none}
+@media print{
+  @page{margin:14mm}
+  html,body{background:#fff!important}
+  body.printing main{display:none!important}
+  body.printing #pr{display:block;color:#1b2559;font:12pt/1.5 "Bricolage Grotesque",system-ui,sans-serif;color-scheme:light}
+  body.printing #pr .card{box-shadow:none;background:#fff;background-image:none;padding:0;line-height:1.5}
+  body.printing #pr{--sheet:#fff;--ink:#1b2559;--mute:#56618d;--grid:#dbe2f4;--hl:#ffe36b;--pk:#ffc2e0;--bl:#b9dcff;--postit:#fff3a8;--acc:#2c43d0;--accink:#fff}
+  body.printing .sec,body.printing .kwbox,body.printing .pc{break-inside:avoid}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .pgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .pc{border:1.5px solid #1b2559;border-radius:8px;padding:10px 12px}
+  .pc b{display:block;margin-bottom:6px}.pc span{color:#56618d}
+  .prt{font-size:20pt;margin:0 0 12px}
+}
 </style>
 </head>
 <body>
@@ -164,7 +196,7 @@ $('go').onclick = async () => {
     const d=await r.json().catch(()=>({error:'Réponse invalide du serveur.'}));
     if(!r.ok) throw new Error(d.error||'Erreur serveur');
     if(!d || !d.sections || !d.cards) throw new Error('Réponse inattendue, réessaie.');
-    save(d); show(d);
+    d.matiere=$('mat').value.trim(); d.niveau=$('niv').value; save(d); show(d);
   }catch(e){
     $('err').textContent = (e && e.code==='not_granted') ? 'Autorisation refusée : accepte l’accès à Claude pour générer la fiche.' : (e && e.message) || 'Erreur, réessaie.';
   }
@@ -174,14 +206,48 @@ $('go').onclick = async () => {
 function show(d){
   deck=d; $('res').classList.remove('hide');
   const f=$('fiche'); f.textContent='';
-  f.appendChild(el('h2',d.title));
-  (d.sections||[]).forEach(s=>{
-    f.appendChild(el('h3',s.heading));
-    const ul=el('ul'); (s.points||[]).forEach(p=>ul.appendChild(el('li',p))); f.appendChild(ul);
+  const head=el('header',null,'fh');
+  const chips=el('div',null,'chips');
+  if(d.matiere) chips.appendChild(el('span',d.matiere));
+  if(d.niveau) chips.appendChild(el('span',d.niveau));
+  chips.appendChild(el('span',new Date().toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})));
+  head.append(chips, el('h2',d.title));
+  f.appendChild(head);
+  if(d.keywords&&d.keywords.length){
+    const kb=el('div',null,'kwbox'); kb.appendChild(el('strong','À retenir'));
+    const k=el('div',null,'kw'); d.keywords.forEach(w=>k.appendChild(el('span',w))); kb.appendChild(k); f.appendChild(kb);
+  }
+  (d.sections||[]).forEach((s,i)=>{
+    const sec=el('section',null,'sec c'+(i%4));
+    sec.appendChild(el('h3',s.heading));
+    const ul=el('ul'); (s.points||[]).forEach(p=>ul.appendChild(el('li',p))); sec.appendChild(ul);
+    f.appendChild(sec);
   });
-  if(d.keywords&&d.keywords.length){ f.appendChild(el('h3','Mots-clés')); const k=el('div',null,'kw'); d.keywords.forEach(w=>k.appendChild(el('span',w))); f.appendChild(k); }
+  const bar=el('div',null,'dl noprint');
+  const b1=el('button','Télécharger la fiche (PDF)'); b1.onclick=()=>printMode('fiche');
+  const b2=el('button','Télécharger les cartes (PDF)','ghost'); b2.onclick=()=>printMode('cards');
+  bar.append(b1,b2); f.appendChild(bar);
   startCards(); startQuiz(); tab('fiche');
   $('res').scrollIntoView({behavior:'smooth'});
+}
+
+function printMode(mode){
+  let pr=$('pr'); if(!pr){ pr=el('div'); pr.id='pr'; document.body.appendChild(pr); }
+  pr.textContent='';
+  if(mode==='fiche'){
+    pr.appendChild($('fiche').cloneNode(true));
+    pr.querySelectorAll('.noprint').forEach(n=>n.remove());
+  }else{
+    pr.appendChild(el('h2',deck.title+' – cartes mémo','prt'));
+    const g=el('div',null,'pgrid');
+    (deck.cards||[]).forEach(c=>{ const x=el('div',null,'pc'); x.appendChild(el('b',c.q)); x.appendChild(el('span',c.a)); g.appendChild(x); });
+    pr.appendChild(g);
+  }
+  const old=document.title; document.title=(deck.title||'fiche').replace(/[\\/:*?"<>|]/g,'')+(mode==='cards'?' - cartes':'');
+  document.body.classList.add('printing');
+  const done=()=>{document.body.classList.remove('printing');document.title=old;window.removeEventListener('afterprint',done)};
+  window.addEventListener('afterprint',done);
+  setTimeout(()=>window.print(),60);
 }
 
 function tab(t){
@@ -199,7 +265,7 @@ function drawCard(){
   if(!queue.length){
     const box=el('div',null,'card'); box.appendChild(el('h2','🎉 Bravo !'));
     box.appendChild(el('p','Tu as passé toutes les cartes. Recommence pour consolider.'));
-    const b=el('button','Recommencer'); b.onclick=startCards; box.appendChild(b); c.appendChild(box); return;
+    const b=el('button','Recommencer'); b.onclick=startCards; box.appendChild(b); const d2=el('button','Télécharger les cartes (PDF)','ghost'); d2.style.marginLeft='8px'; d2.onclick=()=>printMode('cards'); box.appendChild(d2); c.appendChild(box); return;
   }
   const m=el('div',null,'meta'); m.appendChild(el('span',`${known} / ${total} sues`)); m.appendChild(el('span',`${queue.length} restantes`)); c.appendChild(m);
   const p=el('div',null,'prog'); const i=el('i'); i.style.width=(total?known/total*100:0)+'%'; p.appendChild(i); c.appendChild(p);
