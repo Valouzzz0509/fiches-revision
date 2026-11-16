@@ -4,59 +4,85 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Mes fiches de révision</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<meta name="theme-color" content="#2c43d0">
 <style>
-:root{--bg:#faf7f2;--card:#fff;--ink:#2a2530;--mute:#7a7285;--acc:#7c5cff;--acc2:#ffe9a8;--ok:#2f9e6b;--ko:#d9534f;--line:#e8e2d8;
-box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
-@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#17141c;--card:#221e2b;--ink:#f1ecf7;--mute:#a79fb5;--acc:#a48dff;--acc2:#4a3f1f;--line:#3a3348;color-scheme:dark}}
-:root[data-theme="dark"]{--bg:#17141c;--card:#221e2b;--ink:#f1ecf7;--mute:#a79fb5;--acc:#a48dff;--acc2:#4a3f1f;--line:#3a3348;color-scheme:dark}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
+:root{--paper:#eef2fb;--sheet:#fff;--ink:#1b2559;--mute:#56618d;--grid:#dbe2f4;--margin:#e5574f;
+--hl:rgba(255,222,89,.9);--pk:rgba(255,160,205,.7);--bl:rgba(130,195,255,.7);--postit:#fff3a8;
+--acc:#2c43d0;--accink:#fff;--ok:#1f9d63;--ko:#d9443d;--m:20px;--pad:34px;color-scheme:light}
+@media(min-width:640px){:root{--m:58px;--pad:82px}}
+@media(prefers-color-scheme:dark){:root{--paper:#0d1230;--sheet:#161c42;--ink:#e8ecff;--mute:#9ba7d8;--grid:#272f64;--margin:#c9463f;
+--hl:rgba(255,222,89,.32);--pk:rgba(255,130,190,.34);--bl:rgba(110,180,255,.34);--postit:#4a4420;--acc:#8da0ff;--accink:#0d1230;color-scheme:dark}}
 *{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 system-ui,-apple-system,"Segoe UI",sans-serif}
-main{max-width:760px;margin:0 auto;padding:20px 16px 60px}
-h1{font-size:1.7rem;margin:.2em 0 .1em}
-.sub{color:var(--mute);margin:0 0 18px}
-.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:16px}
-label{font-weight:600;font-size:.9rem;display:block;margin-bottom:6px}
-textarea,input,select{width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px}
-textarea{min-height:170px;resize:vertical}
-.row{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
-.row>*{flex:1 1 140px}
-button{font:inherit;font-weight:600;border:0;border-radius:12px;padding:11px 16px;cursor:pointer;background:var(--acc);color:#fff}
-button.ghost{background:transparent;color:var(--acc);border:1px solid var(--acc)}
-button:disabled{opacity:.5;cursor:wait}
-.tabs{display:flex;gap:6px;margin:6px 0 14px;overflow-x:auto}
-.tabs button{background:var(--card);color:var(--ink);border:1px solid var(--line);flex:0 0 auto}
-.tabs button.on{background:var(--acc);color:#fff;border-color:var(--acc)}
-.fiche h2{font-size:1.25rem;margin:0 0 4px}
-.fiche h3{font-size:1.02rem;margin:18px 0 4px;color:var(--acc)}
-.fiche ul{margin:4px 0;padding-left:20px}
-.kw{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
-.kw span{background:var(--acc2);padding:3px 10px;border-radius:99px;font-size:.88rem}
-.flash{perspective:900px;margin:10px 0}
-.face{min-height:190px;display:flex;align-items:center;justify-content:center;text-align:center;padding:24px;font-size:1.2rem;border-radius:18px;border:2px solid var(--line);background:var(--card);cursor:pointer;user-select:none}
-.face.back{background:var(--acc2);border-color:var(--acc)}
-.prog{height:8px;background:var(--line);border-radius:9px;overflow:hidden;margin:6px 0 10px}
-.prog i{display:block;height:100%;background:var(--ok);width:0;transition:width .3s}
-.meta{color:var(--mute);font-size:.9rem;display:flex;justify-content:space-between}
-.ok{background:var(--ok)}.ko{background:var(--ko)}
-.opt{display:block;width:100%;text-align:left;background:var(--card);color:var(--ink);border:1px solid var(--line);margin:6px 0}
-.opt.good{background:var(--ok);color:#fff}.opt.bad{background:var(--ko);color:#fff}
-.hist button{background:var(--card);color:var(--ink);border:1px solid var(--line);margin:0 6px 6px 0;padding:6px 12px;font-weight:500}
-.err{color:var(--ko);margin-top:8px}
+body{margin:0;background:var(--paper);color:var(--ink);font:17px/1.5 "Bricolage Grotesque",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-text-size-adjust:100%}
+main{max-width:780px;margin:0 auto;padding:max(26px,env(safe-area-inset-top)) 16px max(70px,env(safe-area-inset-bottom))}
+h1{font-size:clamp(1.9rem,6.5vw,3rem);line-height:1.3;font-weight:800;letter-spacing:-.02em;margin:0 0 8px}
+h1 span{background:linear-gradient(transparent 52%,var(--hl) 52%,var(--hl) 92%,transparent 92%);padding:0 .15em;-webkit-box-decoration-break:clone;box-decoration-break:clone}
+.sub{color:var(--mute);margin:0 0 26px;max-width:46ch}
+.card{position:relative;background-color:var(--sheet);
+background-image:linear-gradient(90deg,transparent calc(var(--m) - 1px),var(--margin) calc(var(--m) - 1px),var(--margin) calc(var(--m) + 1px),transparent calc(var(--m) + 1px)),repeating-linear-gradient(180deg,transparent 0,transparent 31px,var(--grid) 31px,var(--grid) 32px);
+border-radius:8px;padding:26px 20px 26px var(--pad);margin-bottom:22px;line-height:32px;box-shadow:0 1px 0 var(--grid),0 16px 30px -22px rgba(27,37,89,.55)}
+label{display:block;font-weight:700;font-size:.95rem;line-height:1.3;margin:0 0 8px}
+textarea,input,select{width:100%;font:inherit;line-height:1.4;color:var(--ink);background:var(--sheet);border:1.5px solid var(--mute);border-radius:9px;padding:11px 12px}
+textarea{min-height:90px;resize:vertical}
+.row{display:flex;gap:14px;flex-wrap:wrap;margin-top:16px}
+.row>*{flex:1 1 150px}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:13px 18px;cursor:pointer;background:var(--acc);color:var(--accink);line-height:1.3}
+button:hover{filter:brightness(1.08)}
+button:disabled{opacity:.55;cursor:wait}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.drop{display:flex;flex-direction:column;align-items:center;gap:3px;width:100%;padding:24px 16px;background:var(--sheet);color:var(--ink);border:2px dashed var(--acc);border-radius:12px}
+.drop b{font-size:1.2rem}.drop small{color:var(--mute);font-weight:500;font-size:.9rem}
+.drop:hover{background:var(--hl);filter:none}
+.thumbs{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px}
+.th{position:relative;width:74px;height:96px}
+.th img{width:100%;height:100%;object-fit:cover;border-radius:6px;border:1px solid var(--grid);box-shadow:0 8px 16px -10px rgba(27,37,89,.6)}
+.th .x{position:absolute;top:-9px;right:-9px;width:28px;height:28px;padding:0;border-radius:50%;background:var(--ink);color:var(--sheet);font-size:.8rem}
+.tabs{display:flex;gap:4px;margin:6px 0 0;overflow-x:auto;padding-left:4px}
+.tabs button{background:transparent;color:var(--mute);border:1.5px solid transparent;border-bottom:0;border-radius:10px 10px 0 0;padding:10px 20px}
+.tabs button.on{background:var(--sheet);color:var(--ink);border-color:var(--grid)}
+.tabs button:hover{filter:none;color:var(--ink)}
+#fiche{border-top-left-radius:0;margin-top:0}
+.fiche h2{font-size:1.7rem;line-height:1.2;font-weight:800;letter-spacing:-.015em;margin:0 0 10px}
+.fiche h3{display:inline-block;font-size:1.08rem;line-height:1.35;font-weight:700;margin:20px 0 4px;background:linear-gradient(transparent 50%,var(--hl) 50%,var(--hl) 92%,transparent 92%);padding:0 .3em 0 .1em}
+.fiche ul{margin:2px 0;padding-left:20px}.fiche li::marker{color:var(--acc)}
+.kw{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.kw span{background:var(--hl);border-radius:4px;padding:0 11px;line-height:30px;font-weight:600;font-size:.92rem}
+.kw span:nth-child(3n+2){background:var(--pk)}.kw span:nth-child(3n){background:var(--bl)}
+.meta{color:var(--mute);font-size:.92rem;display:flex;justify-content:space-between;line-height:1.4}
+.prog{height:10px;background:var(--grid);border-radius:9px;overflow:hidden;margin:8px 0 18px}
+.prog i{display:block;height:100%;background:var(--ok);width:0;transition:width .4s}
+.flash{margin:6px 0 14px}
+.face{min-height:270px;display:flex;align-items:center;justify-content:center;text-align:center;padding:58px 26px 28px;
+font-family:Caveat,"Bricolage Grotesque",cursive;font-weight:600;font-size:clamp(1.8rem,6vw,2.4rem);line-height:1.25;color:var(--ink);cursor:pointer;user-select:none;
+background-color:var(--sheet);background-image:linear-gradient(transparent 43px,var(--margin) 43px,var(--margin) 45px,transparent 45px),repeating-linear-gradient(180deg,transparent 0,transparent 35px,var(--grid) 35px,var(--grid) 36px);
+border:1px solid var(--grid);border-radius:10px;box-shadow:0 18px 34px -20px rgba(27,37,89,.65);transform:rotate(-.5deg)}
+.face.back{background:var(--postit);transform:rotate(.6deg);animation:flip .3s ease}
+@keyframes flip{from{transform:rotateX(70deg) scale(.96);opacity:.4}to{transform:rotate(.6deg);opacity:1}}
+.hint{text-align:center;color:var(--mute);font-size:.92rem;margin:0 0 6px}
+button.ok{background:var(--ok);color:#fff}button.ko{background:var(--ko);color:#fff}
+.opt{display:block;width:100%;text-align:left;background:var(--sheet);color:var(--ink);border:2px solid var(--grid);margin:8px 0;line-height:1.4;font-weight:600}
+.opt.good{background:var(--ok);border-color:var(--ok);color:#fff}.opt.bad{background:var(--ko);border-color:var(--ko);color:#fff}
+#quiz h3{line-height:1.35;font-size:1.15rem}
+.hist{margin-top:22px}
+.hist button{background:var(--sheet);color:var(--ink);border:1.5px solid var(--mute);margin:0 8px 8px 0;padding:6px 14px;border-radius:99px;font-weight:600;font-size:.92rem}
+.err{color:var(--ko);font-weight:600;line-height:1.4;margin-top:12px}
 .hide{display:none}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <main>
-  <h1>📚 Mes fiches de révision</h1>
+  <h1><span>Mes fiches de révision</span></h1>
   <p class="sub">Prends ton cours en photo, l’IA fait la fiche et les cartes. Ensuite, tu révises en t’entraînant.</p>
 
   <section class="card" id="inp">
     <label>Ton cours en photo</label>
     <input type="file" id="pic" accept="image/*" multiple class="hide">
-    <div class="row"><button class="ghost" id="snap" type="button">📷 Prendre / choisir des photos</button></div>
-    <div id="thumbs" class="kw" style="margin-top:10px"></div>
-    <label for="txt" style="margin-top:14px">Ou colle ton cours en texte (facultatif)</label>
+    <button class="drop" id="snap" type="button"><b>Photographier mon cours</b><small>Jusqu’à 5 pages, avec l’appareil photo ou depuis la galerie</small></button>
+    <div id="thumbs" class="thumbs"></div>
+    <label for="txt" style="margin-top:22px">Ou colle ton cours en texte (facultatif)</label>
     <textarea id="txt" style="min-height:90px" placeholder="Tu peux aussi coller du texte ici…"></textarea>
     <div class="row">
       <div><label for="mat">Matière</label><input id="mat" placeholder="Ex : Histoire, Bio, Droit…"></div>
@@ -64,16 +90,16 @@ button:disabled{opacity:.5;cursor:wait}
         <select id="niv"><option>Collège</option><option>Lycée</option><option selected>Études supérieures</option></select></div>
     </div>
     <div class="row"><div><label for="code">Code d’accès</label><input id="code" type="password" placeholder="Code donné par le créateur du site"></div></div>
-    <div class="row"><button id="go">✨ Générer ma fiche</button></div>
+    <div class="row"><button id="go">Générer ma fiche</button></div>
     <div class="err" id="err"></div>
     <div class="hist" id="hist" style="margin-top:14px"></div>
   </section>
 
   <section id="res" class="hide">
     <div class="tabs" id="tabs">
-      <button data-t="fiche" class="on">📝 Fiche</button>
-      <button data-t="cards">🃏 Cartes</button>
-      <button data-t="quiz">🎯 Quiz</button>
+      <button data-t="fiche" class="on">Fiche</button>
+      <button data-t="cards">Cartes</button>
+      <button data-t="quiz">Quiz</button>
     </div>
     <div id="fiche" class="card fiche"></div>
     <div id="cards" class="hide"></div>
@@ -106,7 +132,13 @@ async function shrink(file){
 }
 function drawThumbs(){
   const t=$('thumbs'); t.textContent='';
-  photos.forEach((p,i)=>{ const s=el('span','📄 Page '+(i+1)+' ✕'); s.style.cursor='pointer'; s.onclick=()=>{photos.splice(i,1);drawThumbs()}; t.appendChild(s); });
+  photos.forEach((p,i)=>{
+    const w=el('div',null,'th'), im=document.createElement('img'), x=el('button','✕','x');
+    im.src=URL.createObjectURL(p); im.alt='Page '+(i+1);
+    x.type='button'; x.setAttribute('aria-label','Retirer la page '+(i+1));
+    x.onclick=()=>{photos.splice(i,1);drawThumbs()};
+    w.append(im,x); t.appendChild(w);
+  });
 }
 $('snap').onclick=()=>$('pic').click();
 $('pic').onchange=async e=>{
@@ -136,7 +168,7 @@ $('go').onclick = async () => {
   }catch(e){
     $('err').textContent = (e && e.code==='not_granted') ? 'Autorisation refusée : accepte l’accès à Claude pour générer la fiche.' : (e && e.message) || 'Erreur, réessaie.';
   }
-  btn.disabled=false; btn.textContent='✨ Générer ma fiche';
+  btn.disabled=false; btn.textContent='Générer ma fiche';
 };
 
 function show(d){
@@ -172,7 +204,7 @@ function drawCard(){
   const m=el('div',null,'meta'); m.appendChild(el('span',`${known} / ${total} sues`)); m.appendChild(el('span',`${queue.length} restantes`)); c.appendChild(m);
   const p=el('div',null,'prog'); const i=el('i'); i.style.width=(total?known/total*100:0)+'%'; p.appendChild(i); c.appendChild(p);
   const fl=el('div',null,'flash'); const face=el('div',queue[0].q,'face'); fl.appendChild(face); c.appendChild(fl);
-  c.appendChild(el('p','Touche la carte pour voir la réponse',null)).style.cssText='text-align:center;color:var(--mute);font-size:.9rem';
+  c.appendChild(el('p','Touche la carte pour voir la réponse','hint'));
   const r=el('div',null,'row'); r.classList.add('hide');
   const ko=el('button','🔁 À revoir','ko'), ok=el('button','✅ Je savais','ok');
   ko.onclick=()=>{ queue.push(queue.shift()); flipped=false; drawCard(); };
