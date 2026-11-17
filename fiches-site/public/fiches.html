@@ -18,8 +18,18 @@
 <main class="wrap narrow">
   <div class="page">
     <h1>Mes fiches</h1>
-    <p class="sub">Tes fiches sont enregistrées sur cet appareil. Si tu changes de téléphone ou d’ordinateur, tu ne les retrouveras pas.</p>
+    <p class="sub">Tes fiches sont enregistrées sur ton compte : tu les retrouves sur tous tes appareils.</p>
   </div>
+
+  <div class="postit hide" id="importBox">
+    <b id="importTitle"></b>
+    <p>Elles ont été créées avant les comptes. Ajoute-les à ton compte pour les garder.</p>
+    <div class="row"><button id="importBtn" type="button">Les ajouter à mon compte</button></div>
+    <div class="err" id="importErr" role="alert"></div>
+  </div>
+
+  <div class="status" id="loading" role="status"><i></i><span>Chargement de tes fiches…</span></div>
+  <div class="err" id="err" role="alert"></div>
   <ul class="lib" id="lib"></ul>
   <div class="card plain empty hide" id="empty">
     <h2>Aucune fiche pour l’instant</h2>
@@ -29,14 +39,22 @@
 </main>
 
 <div id="site-footer"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="common.js"></script>
 <script>
 chrome('fiches');
 
-function render(){
-  const lib=$('lib'); lib.textContent='';
-  const all=Store.all();
-  $('empty').classList.toggle('hide',all.length>0);
+async function render(){
+  const lib=$('lib'); $('err').textContent='';
+  let all=[];
+  try{ all=await Store.all(); }
+  catch(e){ $('loading').classList.add('hide'); $('err').textContent='Impossible de charger tes fiches. Vérifie ta connexion internet puis recharge la page.'; return; }
+  $('loading').classList.add('hide');
+  lib.textContent='';
+  const loc=Local.all();
+  $('importBox').classList.toggle('hide',!loc.length);
+  if(loc.length) $('importTitle').textContent=loc.length+(loc.length>1?' fiches sont enregistrées':' fiche est enregistrée')+' sur cet appareil';
+  $('empty').classList.toggle('hide',all.length>0||loc.length>0);
   all.forEach(d=>{
     const li=el('li',null,'item c'+colorIndex(d.matiere||d.title));
     const h=el('h2'); const a=el('a',d.title||'Fiche sans titre'); a.href='fiche.html?id='+encodeURIComponent(d.id); h.appendChild(a);
@@ -49,7 +67,8 @@ function render(){
     del.onclick=()=>{
       acts.textContent='';
       acts.appendChild(el('span','Supprimer cette fiche ?'));
-      const yes=el('button','Oui, supprimer','ko'); yes.type='button'; yes.onclick=()=>{Store.remove(d.id);render()};
+      const yes=el('button','Oui, supprimer','ko'); yes.type='button';
+      yes.onclick=async()=>{ yes.disabled=true; try{ await Store.remove(d.id); }catch(e){ $('err').textContent='La fiche n’a pas pu être supprimée. Réessaie.'; } render(); };
       const no=el('button','Annuler','ghost'); no.type='button'; no.onclick=render;
       acts.append(yes,no);
     };
@@ -57,7 +76,15 @@ function render(){
     li.append(h,meta,meta2,acts); lib.appendChild(li);
   });
 }
-render();
+
+$('importBtn').onclick=async()=>{
+  $('importBtn').disabled=true; $('importErr').textContent='';
+  try{ await Store.importLocal(); }
+  catch(e){ $('importErr').textContent='L’ajout n’a pas fonctionné. Réessaie dans un instant.'; $('importBtn').disabled=false; return; }
+  $('importBtn').disabled=false; render();
+};
+
+(async()=>{ const s=await gate(); if(!s) return; render(); })();
 </script>
 </body>
 </html>

@@ -227,3 +227,22 @@ details.q p{margin:8px 0 0}
 .qa{margin:4px 0 0;padding-left:20px;line-height:1.5}
 .qa li{margin:0 0 8px}.qa span{color:var(--mute)}
 @media print{ .par dt{background:none;border-bottom:3px solid #ffe36b} }
+
+/* ---------- comptes ---------- */
+.check{display:flex;gap:12px;align-items:flex-start;font-weight:500;line-height:1.45;margin-top:18px}
+.check input{width:22px;height:22px;flex:none;margin:1px 0 0;accent-color:var(--acc)}
+.linkrow{margin:14px 0 0;line-height:1.4}
+.linkbtn{background:none;border:0;padding:4px 0;color:var(--acc);font-weight:600;text-decoration:underline;cursor:pointer}
+.okmsg{margin-top:14px;background:var(--gr);border-radius:8px;padding:12px 14px;line-height:1.45;font-weight:600}
+.limit{margin:12px 0 0;color:var(--mute);font-size:.92rem;line-height:1.4}
+.postit{background:var(--postit);border-radius:6px;padding:16px 18px;margin:0 0 22px;line-height:1.45;box-shadow:0 12px 22px -16px var(--shadow)}
+.postit b{font-family:Caveat,cursive;font-size:1.5rem;line-height:1.1}
+.postit p{margin:4px 0 0}
+.acct h2{font-size:1.2rem;margin-bottom:6px}
+.muted{color:var(--mute);margin:0 0 4px}
+.danger-btn{color:var(--ko);border-color:var(--ko)}
+.legal h2{font-size:1.15rem;margin:22px 0 6px}
+.legal h2:first-child{margin-top:0}
+.legal p,.legal ul{margin:0 0 8px}
+.legal ul{padding-left:20px}.legal li{margin:0 0 6px}
+#modes{margin-bottom:0}

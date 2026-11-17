@@ -42,26 +42,29 @@
         <select id="obj"><option>Juste réviser</option><option>Un contrôle</option><option>Le bac ou un examen</option><option>Un oral</option></select></div>
     </div>
 
-    <div class="row">
-      <div><label for="code">Code d’accès</label><input id="code" type="password" autocomplete="off" placeholder="Demande-le à la personne qui t’a donné le lien"></div>
-    </div>
-
     <div class="row"><button id="go" type="submit">Générer ma fiche</button></div>
+    <p class="limit hide" id="limit"></p>
     <div class="status hide" id="status" role="status" aria-live="polite"><i></i><span id="statusTxt"></span></div>
     <div class="err" id="err" role="alert"></div>
   </form>
 </main>
 
 <div id="site-footer"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="common.js"></script>
 <script>
 chrome('creer');
 let photos=[];
 const MSGS=['Lecture de ton cours…','Repérage des notions importantes…','Rédaction de la fiche…','Création des cartes mémo…','Préparation du quiz…','Dernières vérifications…'];
 
+(async()=>{
+  const s=await gate(); if(!s) return;
+  if(CONFIG&&CONFIG.limites){ $('limit').textContent='Tu peux créer jusqu’à '+CONFIG.limites.fiches+' fiches par jour.'; $('limit').classList.remove('hide'); }
+})();
+
 /* valeurs mémorisées */
-$('mat').value=pref('mat'); $('code').value=pref('code');
-if(pref('niv')) $('niv').value=pref('niv'); else $('niv').value='Terminale';
+$('mat').value=pref('mat');
+$('niv').value=pref('niv')||'Terminale';
 if(pref('obj')) $('obj').value=pref('obj');
 
 async function shrink(file){
@@ -97,7 +100,7 @@ $('form').onsubmit=async ev=>{
   ev.preventDefault();
   const text=$('txt').value.trim(); $('err').textContent='';
   if(!photos.length && text.length<80){ $('err').textContent='Ajoute une photo de ton cours, ou colle un peu plus de texte.'; return; }
-  pref('mat',$('mat').value.trim()); pref('niv',$('niv').value); pref('obj',$('obj').value); pref('code',$('code').value.trim());
+  pref('mat',$('mat').value.trim()); pref('niv',$('niv').value); pref('obj',$('obj').value);
 
   const btn=$('go'); btn.disabled=true;
   const st=$('status'), tx=$('statusTxt'); st.classList.remove('hide');
@@ -105,18 +108,17 @@ $('form').onsubmit=async ev=>{
   const timer=setInterval(()=>{ i=Math.min(i+1,MSGS.length-1); tx.textContent=MSGS[i]; },4500);
   try{
     const imgs=await Promise.all(photos.map(p=>b64(p.blob)));
-    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text:text.slice(0,12000),images:imgs,matiere:$('mat').value,niveau:$('niv').value,objectif:$('obj').value,code:$('code').value.trim()})});
-    const d=await r.json().catch(()=>({error:'Réponse invalide du serveur.'}));
-    if(!r.ok) throw new Error(d.error||'Erreur serveur');
+    const d=await api('/api/generate',{text:text.slice(0,12000),images:imgs,matiere:$('mat').value,niveau:$('niv').value,objectif:$('obj').value});
     if(!d||!d.sections||!d.cards) throw new Error('Réponse inattendue, réessaie.');
-    d.id='f'+Date.now().toString(36); d.createdAt=Date.now();
+    d.id=newId(); d.createdAt=Date.now();
     d.matiere=$('mat').value.trim(); d.niveau=$('niv').value; d.objectif=$('obj').value;
-    Store.add(d);
+    try{ await Store.add(d); }
+    catch(e){ Local.add(d); }          // si l'enregistrement échoue, on garde la fiche sur l'appareil
     location.href='fiche.html?id='+d.id;
     return;
   }catch(e){
-    $('err').textContent=(e&&e.message)||'Erreur, réessaie.';
+    if(e.status===401){ location.href='connexion.html?next=creer.html'; return; }
+    $('err').textContent=e.message||'Erreur, réessaie.';
   }
   clearInterval(timer); st.classList.add('hide'); btn.disabled=false;
 };

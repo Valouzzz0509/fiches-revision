@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Connexion – Carnet</title>
+<meta name="theme-color" content="#2c43d0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap narrow">
+  <div class="page">
+    <h1 id="ttl">Connexion</h1>
+    <p class="sub" id="sub">Connecte-toi pour retrouver tes fiches sur tous tes appareils.</p>
+  </div>
+
+  <div class="tabs" id="modes" role="tablist">
+    <button type="button" data-m="login" class="on" role="tab">Se connecter</button>
+    <button type="button" data-m="signup" role="tab">Créer un compte</button>
+  </div>
+
+  <form class="card" id="f" novalidate>
+    <div id="rowEmail">
+      <label for="email">Adresse email</label>
+      <input id="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="toi@exemple.fr">
+    </div>
+    <div id="rowPass" class="row">
+      <div>
+        <label for="pass" id="passLbl">Mot de passe</label>
+        <input id="pass" type="password" autocomplete="current-password" placeholder="8 caractères minimum">
+      </div>
+    </div>
+    <div id="rowConsent" class="hide">
+      <label class="check"><input type="checkbox" id="consent"><span>J’ai lu la <a href="confidentialite.html" target="_blank" rel="noopener">politique de confidentialité</a>. Si j’ai moins de 15 ans, j’ai l’accord d’un parent ou d’un responsable.</span></label>
+    </div>
+    <div class="row"><button id="go" type="submit">Se connecter</button></div>
+    <p class="linkrow" id="forgotRow"><button type="button" class="linkbtn" id="forgot">Mot de passe oublié ?</button></p>
+    <p class="linkrow hide" id="backRow"><button type="button" class="linkbtn" id="back">Retour à la connexion</button></p>
+    <div class="okmsg hide" id="ok" role="status"></div>
+    <div class="err" id="err" role="alert"></div>
+  </form>
+</main>
+
+<div id="site-footer"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="common.js"></script>
+<script>
+chrome('connexion');
+
+/* où aller après la connexion (uniquement vers une page du site) */
+const nextParam=new URLSearchParams(location.search).get('next')||'';
+const next=/^[a-z0-9_-]+\.html(\?[^#\s]*)?(#\S*)?$/i.test(nextParam)?nextParam:'';
+const recovery=/type=recovery/.test(location.hash);
+let mode='login';
+
+const TXT={
+  login:{t:'Connexion',s:'Connecte-toi pour retrouver tes fiches sur tous tes appareils.',b:'Se connecter',p:'current-password'},
+  signup:{t:'Créer un compte',s:'Une adresse email et un mot de passe suffisent. Tes fiches te suivent sur tous tes appareils.',b:'Créer mon compte',p:'new-password'},
+  forgot:{t:'Mot de passe oublié',s:'Entre ton adresse email : tu recevras un lien pour choisir un nouveau mot de passe.',b:'Envoyer le lien',p:'current-password'},
+  reset:{t:'Nouveau mot de passe',s:'Choisis un nouveau mot de passe pour ton compte.',b:'Enregistrer le mot de passe',p:'new-password'}
+};
+function frErr(e){
+  const m=String((e&&e.message)||'').toLowerCase(), st=e&&e.status;
+  if(m.includes('invalid login')) return 'Email ou mot de passe incorrect.';
+  if(m.includes('email not confirmed')) return 'Ton email n’est pas encore confirmé. Clique sur le lien reçu par email.';
+  if(m.includes('already registered')||m.includes('already been registered')) return 'Un compte existe déjà avec cet email. Connecte-toi.';
+  if(m.includes('at least')||m.includes('too short')) return 'Le mot de passe est trop court (8 caractères minimum).';
+  if(m.includes('weak')||m.includes('pwned')||m.includes('easy to guess')) return 'Ce mot de passe est trop facile à deviner. Choisis-en un autre.';
+  if(m.includes('different from the old')||m.includes('same as the old')) return 'Choisis un mot de passe différent de l’ancien.';
+  if(m.includes('valid email')||m.includes('invalid email')||m.includes('unable to validate email')) return 'Cette adresse email n’est pas valide.';
+  if(m.includes('rate limit')||m.includes('too many')||st===429) return 'Trop de tentatives. Réessaie dans quelques minutes.';
+  if(m.includes('fetch')||m.includes('network')) return 'Impossible de joindre le serveur. Vérifie ta connexion internet.';
+  return 'Une erreur est survenue. Réessaie.';
+}
+function setMode(m){
+  mode=m; const t=TXT[m];
+  $('ttl').textContent=t.t; $('sub').textContent=t.s; $('go').textContent=t.b; $('pass').autocomplete=t.p;
+  $('modes').classList.toggle('hide',m==='forgot'||m==='reset');
+  document.querySelectorAll('#modes button').forEach(b=>{const on=b.dataset.m===m;b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
+  $('rowEmail').classList.toggle('hide',m==='reset');
+  $('rowPass').classList.toggle('hide',m==='forgot');
+  $('passLbl').textContent=m==='reset'?'Nouveau mot de passe':'Mot de passe';
+  $('rowConsent').classList.toggle('hide',m!=='signup');
+  $('forgotRow').classList.toggle('hide',m!=='login');
+  $('backRow').classList.toggle('hide',m!=='forgot');
+  $('err').textContent=''; $('ok').classList.add('hide');
+}
+$('modes').onclick=e=>{ if(e.target.dataset.m) setMode(e.target.dataset.m); };
+$('forgot').onclick=()=>{ setMode('forgot'); $('email').focus(); };
+$('back').onclick=()=>setMode('login');
+if(recovery) setMode('reset');
+
+(async()=>{
+  try{
+    const c=await sb();
+    c.auth.onAuthStateChange(ev=>{ if(ev==='PASSWORD_RECOVERY') setMode('reset'); });
+    const s=await getSession();
+    if(s&&!recovery){ pref('in','1'); location.replace(next||'fiches.html'); }
+  }catch(e){ $('err').textContent=e.message; $('go').disabled=true; }
+})();
+
+$('f').onsubmit=async ev=>{
+  ev.preventDefault();
+  const err=$('err'), ok=$('ok'); err.textContent=''; ok.classList.add('hide');
+  const email=$('email').value.trim(), pass=$('pass').value;
+  if(mode!=='reset'&&!/^\S+@\S+\.\S+$/.test(email)){ err.textContent='Entre une adresse email valide.'; $('email').focus(); return; }
+  if(mode!=='forgot'&&mode!=='login'&&pass.length<8){ err.textContent='Le mot de passe doit faire au moins 8 caractères.'; $('pass').focus(); return; }
+  if(mode==='login'&&!pass){ err.textContent='Entre ton mot de passe.'; $('pass').focus(); return; }
+  if(mode==='signup'&&!$('consent').checked){ err.textContent='Coche la case pour continuer.'; return; }
+  const btn=$('go'); btn.disabled=true;
+  try{
+    const c=await sb();
+    if(mode==='login'){
+      const {error}=await c.auth.signInWithPassword({email,password:pass}); if(error) throw error;
+      pref('in','1'); location.href=next||'fiches.html'; return;
+    }
+    if(mode==='signup'){
+      const {data,error}=await c.auth.signUp({email,password:pass,options:{emailRedirectTo:location.origin+'/connexion.html'}}); if(error) throw error;
+      if(data.session){ pref('in','1'); location.href=next||'creer.html'; return; }
+      if(data.user&&Array.isArray(data.user.identities)&&data.user.identities.length===0){ err.textContent='Un compte existe déjà avec cet email. Connecte-toi.'; }
+      else{ ok.textContent='Compte créé. Ouvre l’email que nous venons de t’envoyer et clique sur le lien pour confirmer ton adresse, puis reviens te connecter.'; ok.classList.remove('hide'); $('f').reset(); }
+    }
+    if(mode==='forgot'){
+      const {error}=await c.auth.resetPasswordForEmail(email,{redirectTo:location.origin+'/connexion.html'}); if(error) throw error;
+      ok.textContent='Si un compte existe avec cette adresse, tu vas recevoir un email avec un lien pour changer ton mot de passe.'; ok.classList.remove('hide');
+    }
+    if(mode==='reset'){
+      const {error}=await c.auth.updateUser({password:pass}); if(error) throw error;
+      pref('in','1'); location.href='fiches.html'; return;
+    }
+  }catch(e){ err.textContent=frErr(e); }
+  btn.disabled=false;
+};
+</script>
+</body>
+</html>

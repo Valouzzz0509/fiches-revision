@@ -18,9 +18,11 @@
 <main class="wrap narrow">
   <p class="crumbs"><a href="fiches.html">‹ Mes fiches</a></p>
 
+  <div class="status" id="loading" role="status"><i></i><span>Chargement de ta fiche…</span></div>
+
   <div id="missing" class="card plain empty hide">
     <h2>Fiche introuvable</h2>
-    <p>Elle a peut-être été supprimée, ou elle a été créée sur un autre appareil.</p>
+    <p>Elle a peut-être été supprimée, ou elle appartient à un autre compte.</p>
     <a class="btn" href="fiches.html">Voir mes fiches</a>
   </div>
 
@@ -40,15 +42,18 @@
 </main>
 
 <div id="site-footer"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
 <script src="common.js"></script>
 <script>
 chrome('fiches');
-const id=new URLSearchParams(location.search).get('id');
-const deck=id&&Store.get(id);
-let queue=[],known=0,flipped=false,qi=0,score=0;
+let deck=null,queue=[],known=0,flipped=false,qi=0,score=0;
 
-if(!deck){ $('missing').classList.remove('hide'); }
-else{
+(async()=>{
+  const s=await gate(); if(!s) return;
+  const id=new URLSearchParams(location.search).get('id');
+  deck=id?await Store.get(id):null;
+  $('loading').classList.add('hide');
+  if(!deck){ $('missing').classList.remove('hide'); return; }
   document.title=deck.title+' – Carnet';
   $('view').classList.remove('hide');
   $('fiche').appendChild(buildFiche(deck,true,m=>printDeck(deck,m)));
@@ -57,11 +62,13 @@ else{
   tab(['cards','quiz','veille'].includes(h)?h:'fiche');
 
   let armed=false;
-  $('del').onclick=()=>{
+  $('del').onclick=async()=>{
     if(!armed){ armed=true; $('del').textContent='Confirmer la suppression'; $('del').style.color='var(--ko)'; return; }
-    Store.remove(deck.id); location.href='fiches.html';
+    $('del').disabled=true;
+    try{ await Store.remove(deck.id); }catch(e){}
+    location.href='fiches.html';
   };
-}
+})();
 
 function tab(t){
   ['fiche','cards','quiz','veille'].forEach(x=>$(x).classList.toggle('hide',x!==t));
@@ -96,51 +103,40 @@ function drawCard(){
 }
 
 /* ---- veille de contrôle ---- */
-function drawVeille(note){
+function drawVeille(){
   const c=$('veille'); c.textContent='';
   if(deck.express){
     c.appendChild(buildVeille(deck,false));
     const bar=el('div',null,'dl');
     const b1=el('button','Télécharger la veille (PDF)'); b1.onclick=()=>printDeck(deck,'veille');
-    const b2=el('button','Refaire la veille','ghost'); b2.onclick=()=>{deck.express=null; Store.update(deck); drawVeille();};
+    const b2=el('button','Refaire la veille','ghost'); b2.onclick=()=>{deck.express=null; Store.update(deck).catch(()=>{}); drawVeille();};
     bar.append(b1,b2); c.appendChild(bar);
     return;
   }
   const box=el('div',null,'card plain');
   box.appendChild(el('h2','Veille de contrôle'));
   box.appendChild(el('p','Une version courte de ta fiche, à relire en 5 minutes avant un contrôle : l’essentiel, ce qu’il faut savoir par cœur, les pièges à éviter et un mini-test.'));
-  const codeRow=el('div',null,'row');
-  const codeBox=el('div'); codeBox.appendChild(el('label','Code d’accès')); codeBox.lastChild.setAttribute('for','vcode');
-  const codeIn=document.createElement('input'); codeIn.id='vcode'; codeIn.type='password'; codeIn.autocomplete='off'; codeIn.placeholder='Le même code que pour créer une fiche';
-  codeBox.appendChild(codeIn); codeRow.appendChild(codeBox);
-  if(pref('code')) codeRow.classList.add('hide');
-  box.appendChild(codeRow);
   const row=el('div',null,'row');
   const btn=el('button','Préparer ma veille'); btn.type='button'; row.appendChild(btn); box.appendChild(row);
   const st=el('div',null,'status hide'); st.setAttribute('role','status'); st.appendChild(el('i')); const stTxt=el('span','Lecture de ta fiche…'); st.appendChild(stTxt); box.appendChild(st);
-  const err=el('div',note||'','err'); err.setAttribute('role','alert'); box.appendChild(err);
+  const err=el('div','','err'); err.setAttribute('role','alert'); box.appendChild(err);
   c.appendChild(box);
 
   btn.onclick=async()=>{
-    const code=(codeIn.value.trim()||pref('code'));
-    err.textContent='';
-    if(!code){ codeRow.classList.remove('hide'); err.textContent='Entre ton code d’accès.'; codeIn.focus(); return; }
-    btn.disabled=true; st.classList.remove('hide');
+    err.textContent=''; btn.disabled=true; st.classList.remove('hide');
     const msgs=['Lecture de ta fiche…','Choix de l’essentiel…','Préparation du mini-test…'];
     let i=0; stTxt.textContent=msgs[0];
     const timer=setInterval(()=>{ i=Math.min(i+1,msgs.length-1); stTxt.textContent=msgs[i]; },4000);
     try{
-      const r=await fetch('/api/express',{method:'POST',headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({code,matiere:deck.matiere||'',niveau:deck.niveau||'',
-          fiche:{title:deck.title,sections:deck.sections,keywords:deck.keywords,cards:deck.cards}})});
-      const d=await r.json().catch(()=>({error:'Réponse invalide du serveur.'}));
-      if(r.status===401){ codeRow.classList.remove('hide'); throw new Error('Code d’accès incorrect.'); }
-      if(!r.ok) throw new Error(d.error||'Erreur serveur');
+      const d=await api('/api/express',{matiere:deck.matiere||'',niveau:deck.niveau||'',
+        fiche:{title:deck.title,sections:deck.sections,keywords:deck.keywords,cards:deck.cards}});
       if(!d.essentiel||!d.par_coeur) throw new Error('Réponse inattendue, réessaie.');
-      pref('code',code);
-      deck.express=d; Store.update(deck);
+      deck.express=d; Store.update(deck).catch(()=>{});
       clearInterval(timer); drawVeille(); return;
-    }catch(e){ err.textContent=e.message||'Erreur, réessaie.'; }
+    }catch(e){
+      if(e.status===401){ location.href='connexion.html?next='+encodeURIComponent(location.pathname.split('/').pop()+location.search+'#veille'); return; }
+      err.textContent=e.message||'Erreur, réessaie.';
+    }
     clearInterval(timer); st.classList.add('hide'); btn.disabled=false;
   };
 }

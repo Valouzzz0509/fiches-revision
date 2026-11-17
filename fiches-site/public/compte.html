@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mon compte – Carnet</title>
+<meta name="theme-color" content="#2c43d0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap narrow">
+  <div class="page">
+    <h1>Mon compte</h1>
+    <p class="sub" id="who">Connecté.</p>
+  </div>
+
+  <section class="card plain acct">
+    <h2>Ta session</h2>
+    <p id="limits" class="muted"></p>
+    <div class="row"><button type="button" id="out" class="ghost">Se déconnecter</button></div>
+  </section>
+
+  <section class="card plain acct">
+    <h2>Tes données</h2>
+    <p class="muted">Récupère toutes tes fiches dans un seul fichier.</p>
+    <div class="row"><button type="button" id="exp" class="ghost">Exporter mes fiches</button></div>
+    <div class="err" id="expErr" role="alert"></div>
+  </section>
+
+  <section class="card plain acct">
+    <h2>Supprimer mon compte</h2>
+    <p class="muted">Ton compte et toutes tes fiches seront supprimés définitivement. Cette action est irréversible.</p>
+    <div class="row"><button type="button" id="del" class="ghost danger-btn">Supprimer mon compte</button></div>
+    <div class="hide" id="delConfirm">
+      <p><b>Tu es sûr·e ?</b> Tes fiches seront perdues. Pense à les exporter avant si tu veux les garder.</p>
+      <div class="row">
+        <button type="button" id="delYes" class="ko">Oui, supprimer définitivement</button>
+        <button type="button" id="delNo" class="ghost">Annuler</button>
+      </div>
+    </div>
+    <div class="err" id="delErr" role="alert"></div>
+  </section>
+</main>
+
+<div id="site-footer"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="common.js"></script>
+<script>
+chrome('compte');
+(async()=>{
+  const s=await gate(); if(!s) return;
+  $('who').textContent='Connecté avec '+s.user.email+'.';
+  if(CONFIG&&CONFIG.limites) $('limits').textContent='Chaque jour, tu peux créer jusqu’à '+CONFIG.limites.fiches+' fiches et '+CONFIG.limites.veilles+' veilles de contrôle.';
+})();
+$('out').onclick=logout;
+
+$('exp').onclick=async()=>{
+  $('expErr').textContent='';
+  try{
+    const all=await Store.all();
+    const blob=new Blob([JSON.stringify({exporte_le:new Date().toISOString(),fiches:all},null,2)],{type:'application/json'});
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='mes-fiches-carnet.json';
+    document.body.appendChild(a); a.click(); a.remove(); setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  }catch(e){ $('expErr').textContent='L’export n’a pas fonctionné. Réessaie dans un instant.'; }
+};
+
+$('del').onclick=()=>{ $('delConfirm').classList.remove('hide'); $('del').classList.add('hide'); };
+$('delNo').onclick=()=>{ $('delConfirm').classList.add('hide'); $('del').classList.remove('hide'); };
+$('delYes').onclick=async()=>{
+  $('delErr').textContent=''; $('delYes').disabled=true;
+  try{
+    await api('/api/delete-account',{});
+    try{ const c=await sb(); await c.auth.signOut(); }catch(e){}
+    pref('in',''); Local.clear();
+    location.href='index.html';
+  }catch(e){ $('delErr').textContent=e.message||'La suppression n’a pas fonctionné. Réessaie.'; $('delYes').disabled=false; }
+};
+</script>
+</body>
+</html>
