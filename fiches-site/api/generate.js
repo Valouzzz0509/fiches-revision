@@ -1,6 +1,7 @@
 // Fonction serverless Vercel : la clé API reste ici, jamais dans la page.
 // Les consignes données à l'IA dépendent de la classe, de la matière et de l'objectif.
 const { guard } = require('../lib/auth');
+const { award } = require('../lib/game');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
 
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
@@ -212,7 +213,9 @@ module.exports = async (req, res) => {
     raw = (j.content || []).map((b) => b.text || '').join('');
     const a = raw.indexOf('{'), b = raw.lastIndexOf('}');
     if (a < 0 || b < 0) throw new Error('aucun JSON dans la réponse');
-    return res.status(200).json(clean(JSON.parse(raw.slice(a, b + 1))));
+    const out = clean(JSON.parse(raw.slice(a, b + 1)));
+    const game = await award(g.user.id, 'fiche', 1);   // points pour la fiche créée
+    return res.status(200).json({ ...out, _game: game });
   } catch (e) {
     console.error('generate error:', e, 'stop:', stop, 'raw:', raw.slice(0, 500));
     await g.refund();

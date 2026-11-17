@@ -1,4 +1,5 @@
 /* Carnet – code partagé par toutes les pages */
+try { const _t = localStorage.getItem('p_theme'); if (_t) document.documentElement.dataset.skin = _t; } catch (e) {}
 const SITE = 'Carnet';
 const $ = id => document.getElementById(id);
 function el(tag, txt, cls) {
@@ -153,7 +154,7 @@ function chrome(active) {
     '<div><b>' + SITE + '</b><p>Des fiches de révision, des cartes mémo et un quiz à partir d’une photo de ton cours.</p></div>' +
     '<nav aria-label="Pied de page"><a href="index.html">Accueil</a><a href="creer.html">Créer une fiche</a>' +
     (inn ? '<a href="fiches.html">Mes fiches</a><a href="progres.html">Progrès</a><a href="compte.html">Mon compte</a>' : '<a href="connexion.html">Se connecter</a>') +
-    '<a href="confidentialite.html">Confidentialité</a></nav>' +
+    '<a href="plus.html">Carnet Plus</a><a href="confidentialite.html">Confidentialité</a><a href="conditions.html">Conditions</a></nav>' +
     '<p class="small">' + SITE + ' utilise une IA, qui peut se tromper. Relis toujours ta fiche avant de l’apprendre. ' +
     'Ton adresse email et tes fiches sont enregistrées sur ton compte pour que tu les retrouves sur tous tes appareils. ' +
     'Tes photos sont envoyées à l’IA pour créer la fiche et ne sont pas conservées par le site.</p>' +
@@ -302,3 +303,20 @@ async function gain(kind, n) {
   try { const d = await api('/api/game', { action: 'activity', kind, n }); const m = gainMsg(d.game); if (m) toast(m); return d.game; }
   catch (e) { return null; }
 }
+
+/* limites du jour de la personne connectée (différentes pour Carnet Plus) */
+async function myLimits() {
+  const base = CONFIG && CONFIG.limites ? CONFIG.limites : null;
+  try {
+    const d = await api('/api/game', { action: 'state' });
+    if (d.state.plus && CONFIG && CONFIG.plus) return { fiches: CONFIG.plus.fiches, veilles: CONFIG.plus.veilles, plus: true };
+  } catch (e) {}
+  return base ? { fiches: base.fiches, veilles: base.veilles, plus: false } : null;
+}
+/* thèmes de couleurs (réservés à Carnet Plus) */
+const THEMES = [['', 'Classique', '#2c43d0'], ['menthe', 'Menthe', '#0b7d5c'], ['coucher', 'Coucher de soleil', '#c63a25'], ['violet', 'Violet', '#6a30c2']];
+function setTheme(t) {
+  try { if (t) localStorage.setItem('p_theme', t); else localStorage.removeItem('p_theme'); } catch (e) {}
+  if (t) document.documentElement.dataset.skin = t; else delete document.documentElement.dataset.skin;
+}
+function currentTheme() { try { return localStorage.getItem('p_theme') || ''; } catch (e) { return ''; } }

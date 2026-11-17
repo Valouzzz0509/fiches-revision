@@ -57,7 +57,7 @@ chrome('compte');
 (async()=>{
   const s=await gate(); if(!s) return;
   $('who').textContent='Connecté avec '+s.user.email+'.';
-  if(CONFIG&&CONFIG.limites) $('limits').textContent='Chaque jour, tu peux créer jusqu’à '+CONFIG.limites.fiches+' fiches et '+CONFIG.limites.veilles+' veilles de contrôle.';
+  const lim=await myLimits(); if(lim) $('limits').textContent='Chaque jour, tu peux créer jusqu’à '+lim.fiches+' fiches et '+lim.veilles+' veilles de contrôle'+(lim.plus?' (Carnet Plus).':'.');
 })();
 $('out').onclick=logout;
 

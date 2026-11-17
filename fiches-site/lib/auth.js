@@ -41,6 +41,11 @@ const LIMITES = {
   veille: () => num(process.env.DAILY_VEILLES, 10),
   global: () => num(process.env.DAILY_GLOBAL, 300),
 };
+// limites des abonné·e·s Carnet Plus
+const LIMITES_PLUS = {
+  fiche: () => num(process.env.DAILY_FICHES_PLUS, 30),
+  veille: () => num(process.env.DAILY_VEILLES_PLUS, 60),
+};
 const LIBELLE = { fiche: 'fiches', veille: 'veilles de contrôle' };
 
 // À appeler avant de consulter l'IA. Répond lui-même en cas de problème et renvoie null.
@@ -51,17 +56,20 @@ async function guard(req, res, kind) {
   try { user = await getUser(req); } catch (e) { console.error('auth error:', e); }
   if (!user) { res.status(401).json({ error: 'Connecte-toi pour continuer.' }); return null; }
 
+  let plus = false;
+  try { plus = !!(await rpc('is_plus', { p_user: user.id })); } catch (e) { console.error('plus error:', e); }
+  const limite = plus ? LIMITES_PLUS[kind]() : LIMITES[kind]();
   let r;
   try {
-    r = await rpc('consume_quota', { p_user: user.id, p_kind: kind, p_user_limit: LIMITES[kind](), p_global_limit: LIMITES.global() });
+    r = await rpc('consume_quota', { p_user: user.id, p_kind: kind, p_user_limit: limite, p_global_limit: LIMITES.global() });
   } catch (e) {
     console.error('quota error:', e);
     res.status(500).json({ error: 'Impossible de vérifier ta limite du jour. Réessaie.' });
     return null;
   }
-  if (r === 'user') { res.status(429).json({ error: 'Tu as atteint ta limite de ' + LIMITES[kind]() + ' ' + LIBELLE[kind] + ' pour aujourd’hui. Reviens demain.' }); return null; }
+  if (r === 'user') { res.status(429).json({ error: 'Tu as atteint ta limite de ' + limite + ' ' + LIBELLE[kind] + ' pour aujourd’hui. Reviens demain' + (plus ? '.' : ', ou passe à Carnet Plus pour en créer davantage.') }); return null; }
   if (r === 'global') { res.status(429).json({ error: 'Le site a atteint sa limite pour aujourd’hui. Réessaie demain.' }); return null; }
   return { user, refund: () => rpc('refund_quota', { p_user: user.id, p_kind: kind }).catch((e) => console.error('refund error:', e)) };
 }
 
-module.exports = { base, serviceHeaders, configured, getUser, rpc, guard, LIMITES };
+module.exports = { base, serviceHeaders, configured, getUser, rpc, guard, LIMITES, LIMITES_PLUS };

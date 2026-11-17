@@ -59,7 +59,7 @@ const MSGS=['Lecture de ton cours…','Repérage des notions importantes…','R�
 
 (async()=>{
   const s=await gate(); if(!s) return;
-  if(CONFIG&&CONFIG.limites){ $('limit').textContent='Tu peux créer jusqu’à '+CONFIG.limites.fiches+' fiches par jour.'; $('limit').classList.remove('hide'); }
+  const lim=await myLimits(); if(lim){ $('limit').textContent='Tu peux créer jusqu’à '+lim.fiches+' fiches par jour'+(lim.plus?' (Carnet Plus).':'.'); $('limit').classList.remove('hide'); }
 })();
 
 /* valeurs mémorisées */

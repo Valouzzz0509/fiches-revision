@@ -1,6 +1,7 @@
 // Fonction serverless Vercel : crée la « veille de contrôle » (version courte) à partir d'une fiche existante.
 // Elle n'utilise que le texte de la fiche, pas les photos : c'est rapide et peu coûteux.
 const { guard } = require('../lib/auth');
+const { award } = require('../lib/game');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
 
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
@@ -90,7 +91,9 @@ module.exports = async (req, res) => {
     raw = (j.content || []).map((b) => b.text || '').join('');
     const a = raw.indexOf('{'), b = raw.lastIndexOf('}');
     if (a < 0 || b < 0) throw new Error('aucun JSON dans la réponse');
-    return res.status(200).json(clean(JSON.parse(raw.slice(a, b + 1))));
+    const out = clean(JSON.parse(raw.slice(a, b + 1)));
+    const game = await award(g.user.id, 'veille', 1);   // points pour la veille créée
+    return res.status(200).json({ ...out, _game: game });
   } catch (e) {
     console.error('express error:', e, 'stop:', stop, 'raw:', raw.slice(0, 500));
     await g.refund();

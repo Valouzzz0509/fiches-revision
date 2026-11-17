@@ -63,6 +63,13 @@
     </section>
 
     <section class="card plain">
+      <h2>Apparence <span class="plusmark" aria-hidden="true">★</span></h2>
+      <p class="muted" id="plusLine"></p>
+      <div class="themes" id="themes"></div>
+      <div class="row hide" id="plusCta"><a class="btn" href="plus.html">Découvrir Carnet Plus</a></div>
+    </section>
+
+    <section class="card plain">
       <h2>Rappels</h2>
       <p class="muted" id="rmsg">Reçois une notification en fin de journée si tu n’as pas encore révisé, pour garder ta série.</p>
       <div class="row"><button id="rbtn" type="button" class="hide">Activer les rappels</button></div>
@@ -90,19 +97,33 @@ function drawState(s){
   $('stStreakLbl').textContent=(s.streak>1?'jours':'jour')+' de suite'+(s.best>s.streak?' · record '+s.best:'');
   $('stToday').textContent=s.today; $('stWeek').textContent=s.week;
   $('pseudo').value=s.pseudo||''; $('ranking').checked=!!s.ranking;
+  drawThemes(s.plus);
+}
+function drawThemes(plus){
+  if(!plus) setTheme('');                                   // thèmes réservés à Carnet Plus
+  $('plusCta').classList.toggle('hide',!!plus);
+  $('plusLine').textContent=plus?'Choisis les couleurs de ton carnet.':'Les thèmes de couleurs sont réservés aux abonné·e·s Carnet Plus.';
+  const box=$('themes'); box.textContent=''; const cur=currentTheme();
+  THEMES.forEach(t=>{
+    const b=el('button',null); b.type='button'; b.disabled=!plus;
+    const dot=el('i'); dot.style.background=t[2]; b.append(dot,document.createTextNode(t[1]));
+    if(plus&&cur===t[0]) b.classList.add('on');
+    b.onclick=()=>{ setTheme(t[0]); drawThemes(true); };
+    box.appendChild(b);
+  });
 }
 function drawBoard(list){
   const ol=$('rank'); ol.textContent='';
   $('rankEmpty').classList.toggle('hide',list.length>0);
   list.forEach(r=>{
     const li=el('li',null,(ST&&ST.ranking&&ST.pseudo&&r.pseudo.toLowerCase()===ST.pseudo.toLowerCase())?'me':'');
-    li.appendChild(el('span',r.pseudo,'nm'));
+    const nm=el('span',r.pseudo,'nm'); if(r.plus){ const st=el('span','★','plusmark'); st.title='Carnet Plus'; nm.appendChild(st); } li.appendChild(nm);
     if(r.streak>0){ const f=el('span',null,'fl'); f.innerHTML=FLAME; f.appendChild(document.createTextNode(' '+r.streak)); f.title='Série de '+r.streak+' jours'; li.appendChild(f); }
     li.appendChild(el('span',r.pts+' pts','pt'));
     ol.appendChild(li);
   });
   if(ST&&ST.ranking&&ST.rank&&ST.rank>list.length){
-    const li=el('li',null,'me'); li.appendChild(el('span',ST.pseudo+' (toi · '+ST.rank+'e)','nm')); li.appendChild(el('span',ST.week+' pts','pt')); ol.appendChild(li);
+    const li=el('li',null,'me'); const nm2=el('span',ST.pseudo+' (toi · '+ST.rank+'e)','nm'); if(ST.plus) nm2.appendChild(el('span','★','plusmark')); li.appendChild(nm2); li.appendChild(el('span',ST.week+' pts','pt')); ol.appendChild(li);
   }
 }
 

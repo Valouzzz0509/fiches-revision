@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Carnet Plus – Carnet</title>
+<meta name="theme-color" content="#2c43d0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap narrow">
+  <div class="page">
+    <h1>Carnet Plus <span class="plusmark" aria-hidden="true">★</span></h1>
+    <p class="sub">Plus de fiches, plus de points, et ton carnet à tes couleurs.</p>
+  </div>
+
+  <div class="status" id="loading" role="status"><i></i><span>Chargement…</span></div>
+  <div class="err" id="err" role="alert"></div>
+  <div class="okmsg hide" id="msg" role="status"></div>
+
+  <section class="card plain plusbox hide" id="pitch">
+    <div class="price"><span id="prix">4,99 €</span> <small>par mois</small></div>
+    <ul class="perks" id="perks"></ul>
+    <div class="row"><button id="buy" type="button">Passer à Carnet Plus</button></div>
+    <p class="small-note">Sans engagement : tu arrêtes quand tu veux depuis cette page. Le paiement est sécurisé par Stripe. Si tu as moins de 18 ans, demande à un parent ou à un responsable de valider l’abonnement. En continuant, tu acceptes les <a href="conditions.html">conditions</a>.</p>
+  </section>
+
+  <section class="card plain plusbox hide" id="active">
+    <h2>Tu es abonné·e à Carnet Plus <span class="plusmark" aria-hidden="true">★</span></h2>
+    <p class="muted" id="until"></p>
+    <div class="row"><button id="manage" type="button" class="ghost">Gérer mon abonnement</button></div>
+    <p class="small-note">Tu peux y changer ta carte, voir tes factures ou arrêter l’abonnement.</p>
+  </section>
+
+  <div class="card plain hide" id="soon"><h2>Bientôt disponible</h2><p>L’abonnement n’est pas encore ouvert. Reviens bientôt.</p></div>
+</main>
+
+<div id="site-footer"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="common.js"></script>
+<script>
+chrome('plus');
+const qs=new URLSearchParams(location.search).get('paiement');
+
+function perks(){
+  const c=CONFIG&&CONFIG.plus, l=CONFIG&&CONFIG.limites; const ul=$('perks'); ul.textContent='';
+  [ 'Jusqu’à '+(c?c.fiches:30)+' fiches et '+(c?c.veilles:60)+' veilles de contrôle par jour (au lieu de '+(l?l.fiches:5)+' et '+(l?l.veilles:10)+')',
+    'Points doublés : tu montes plus vite de niveau',
+    'Une étoile ★ à côté de ton pseudo dans le classement',
+    'Des thèmes de couleurs pour personnaliser ton carnet'
+  ].forEach(t=>ul.appendChild(el('li',t)));
+}
+function draw(s){
+  $('loading').classList.add('hide');
+  const c=CONFIG&&CONFIG.plus;
+  $('active').classList.toggle('hide',!s.plus);
+  $('pitch').classList.toggle('hide',s.plus||!(c&&c.dispo));
+  $('soon').classList.toggle('hide',s.plus||!!(c&&c.dispo));
+  if(c) $('prix').textContent=c.prix;
+  if(s.plus) $('until').textContent=s.plus_until?'Ton abonnement est en cours. Prochaine échéance ou fin : le '+new Date(s.plus_until).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})+'.':'Ton abonnement est en cours.';
+}
+(async()=>{
+  const s=await gate(); if(!s) return;
+  perks();
+  try{
+    let st=(await api('/api/game',{action:'state'})).state;
+    if(qs==='annule'){ $('msg').textContent='Paiement annulé : rien n’a été débité.'; $('msg').classList.remove('hide'); }
+    if(qs==='ok'&&!st.plus){
+      $('msg').textContent='Merci ! Ton abonnement est en cours d’activation, ça prend quelques secondes…'; $('msg').classList.remove('hide');
+      for(let i=0;i<10&&!st.plus;i++){ await new Promise(r=>setTimeout(r,2000)); st=(await api('/api/game',{action:'state'})).state; }
+      $('msg').textContent=st.plus?'C’est activé, bienvenue dans Carnet Plus !':'Le paiement est bien passé, mais l’activation prend un peu de temps. Recharge la page dans une minute.';
+    } else if(qs==='ok'&&st.plus){ $('msg').textContent='C’est activé, bienvenue dans Carnet Plus !'; $('msg').classList.remove('hide'); }
+    draw(st);
+  }catch(e){ if(e.status===401) return; $('loading').classList.add('hide'); $('err').textContent=e.message||'Erreur, réessaie.'; }
+})();
+
+async function go(action,btn){
+  $('err').textContent=''; btn.disabled=true;
+  try{ const d=await api('/api/billing',{action}); location.href=d.url; }
+  catch(e){ $('err').textContent=e.message||'Erreur, réessaie.'; btn.disabled=false; }
+}
+$('buy').onclick=()=>go('checkout',$('buy'));
+$('manage').onclick=()=>go('portal',$('manage'));
+</script>
+</body>
+</html>

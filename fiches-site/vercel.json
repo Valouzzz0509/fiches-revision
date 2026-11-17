@@ -1,6 +1,19 @@
 {
   "functions": {
-    "api/generate.js": { "maxDuration": 60 },
-    "api/express.js": { "maxDuration": 60 }
-  }
+    "api/generate.js": {
+      "maxDuration": 60
+    },
+    "api/express.js": {
+      "maxDuration": 60
+    },
+    "api/stripe-webhook.js": {
+      "maxDuration": 30
+    }
+  },
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "30 16 * * *"
+    }
+  ]
 }

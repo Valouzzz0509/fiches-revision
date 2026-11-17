@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Conditions – Carnet</title>
+<meta name="theme-color" content="#2c43d0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap narrow">
+  <div class="page">
+    <h1>Conditions</h1>
+    <p class="sub">Les règles d’utilisation de Carnet et de l’abonnement Carnet Plus.</p>
+  </div>
+
+  <article class="card plain legal">
+    <h2>Qui édite Carnet</h2>
+    <p id="editeur">Éditeur : à compléter.</p>
+    <p>Contact : <span id="contact">la personne qui t’a donné le lien</span>.</p>
+
+    <h2>Le service</h2>
+    <p>Carnet crée des fiches de révision, des cartes mémo et des quiz avec une IA, à partir de photos ou de textes de cours. L’IA peut se tromper : relis toujours ta fiche avant de l’apprendre. Carnet ne garantit pas de résultats scolaires.</p>
+
+    <h2>Carnet Plus</h2>
+    <ul>
+      <li>Abonnement mensuel, au prix affiché sur la page <a href="plus.html">Carnet Plus</a> au moment de la souscription.</li>
+      <li>Il se renouvelle chaque mois jusqu’à ce que tu l’arrêtes.</li>
+      <li>Tu peux l’arrêter à tout moment depuis la page Carnet Plus (« Gérer mon abonnement »). L’arrêt prend effet à la fin de la période déjà payée.</li>
+      <li>Rétractation : tu peux demander le remboursement de ton premier paiement dans les 14 jours qui suivent la souscription, en écrivant au contact ci-dessus.</li>
+      <li>Le paiement est traité par Stripe. Carnet ne voit ni ne conserve ton numéro de carte.</li>
+      <li>Si tu supprimes ton compte, ton abonnement est arrêté.</li>
+    </ul>
+
+    <h2>Les mineurs</h2>
+    <p>Si tu as moins de 18 ans, l’abonnement doit être validé et payé par un parent ou un responsable légal. Si tu as moins de 15 ans, demande aussi l’accord d’un parent pour créer un compte.</p>
+
+    <h2>Ce qui est interdit</h2>
+    <p>Utiliser le site pour envoyer des contenus illégaux ou offensants, choisir un pseudo injurieux ou qui permet d’identifier quelqu’un, essayer de tricher sur les points ou de contourner les limites. Les comptes concernés peuvent être suspendus.</p>
+
+    <h2>Tes données</h2>
+    <p>Voir la page <a href="confidentialite.html">Confidentialité</a>.</p>
+  </article>
+</main>
+
+<div id="site-footer"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="common.js"></script>
+<script>
+chrome('');
+sb().then(()=>{
+  if(CONFIG&&CONFIG.editeur) $('editeur').textContent='Éditeur : '+CONFIG.editeur+'.';
+  if(CONFIG&&CONFIG.contact){ const a=document.createElement('a'); a.href='mailto:'+CONFIG.contact; a.textContent=CONFIG.contact; const c=$('contact'); c.textContent=''; c.appendChild(a); }
+}).catch(()=>{});
+</script>
+</body>
+</html>
