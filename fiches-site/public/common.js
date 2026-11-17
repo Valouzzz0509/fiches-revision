@@ -30,6 +30,7 @@ const Store = {
     return l.slice().sort((a, b) => b.createdAt - a.createdAt);
   },
   get(id) { return this.all().find(d => d.id === id); },
+  update(d) { this._w(this.all().map(x => x.id === d.id ? d : x)); },
   add(d) { this._w([d].concat(this.all()).slice(0, 60)); },
   remove(id) { this._w(this.all().filter(d => d.id !== id)); }
 };
@@ -94,11 +95,64 @@ function buildFiche(d, withButtons, onDownload) {
   return f;
 }
 
+/* ---- veille de contrôle : version courte à relire en 5 minutes ---- */
+function veilleMinutes(x) {
+  const words = []
+    .concat(x.essentiel || [], (x.par_coeur || []).map(p => p.terme + ' ' + p.def), x.pieges || [])
+    .join(' ').split(/\s+/).filter(Boolean).length;
+  return Math.max(1, Math.round(words / 170));
+}
+function buildVeille(d, forPrint) {
+  const x = d.express;
+  const f = el('div', null, 'card fiche veille');
+  const head = el('header', null, 'fh');
+  const chips = el('div', null, 'chips');
+  chips.appendChild(el('span', 'Veille de contrôle'));
+  if (d.matiere) chips.appendChild(el('span', d.matiere));
+  chips.appendChild(el('span', '≈ ' + veilleMinutes(x) + ' min de lecture'));
+  head.append(chips, el('h2', d.title));
+  f.appendChild(head);
+
+  const sec = (titre, cls) => { const s = el('section', null, 'sec ' + cls); s.appendChild(el('h3', titre)); f.appendChild(s); return s; };
+
+  const s1 = sec('L’essentiel', 'c0');
+  const ul = el('ul'); x.essentiel.forEach(t => ul.appendChild(el('li', t))); s1.appendChild(ul);
+
+  const s2 = sec('À savoir par cœur', 'c2');
+  const dl = el('dl', null, 'par');
+  x.par_coeur.forEach(p => { const row = el('div'); row.append(el('dt', p.terme), el('dd', p.def)); dl.appendChild(row); });
+  s2.appendChild(dl);
+
+  if (x.pieges && x.pieges.length) {
+    const s3 = sec('Les pièges à éviter', 'c1');
+    const u3 = el('ul'); x.pieges.forEach(t => u3.appendChild(el('li', t))); s3.appendChild(u3);
+  }
+  if (x.test && x.test.length) {
+    const s4 = sec('Teste-toi', 'c3');
+    if (forPrint) {
+      const ol = el('ol', null, 'qa');
+      x.test.forEach(t => { const li = el('li'); li.append(el('b', t.q), el('span', ' Réponse : ' + t.a)); ol.appendChild(li); });
+      s4.appendChild(ol);
+    } else {
+      s4.appendChild(el('p', 'Réponds dans ta tête, puis touche la question pour vérifier.', 'hint2'));
+      x.test.forEach(t => {
+        const det = el('details', null, 'q');
+        det.appendChild(el('summary', t.q));
+        det.appendChild(el('p', t.a));
+        s4.appendChild(det);
+      });
+    }
+  }
+  return f;
+}
+
 function printDeck(d, mode) {
   let pr = $('pr'); if (!pr) { pr = el('div'); pr.id = 'pr'; document.body.appendChild(pr); }
   pr.textContent = '';
   if (mode === 'fiche') {
     pr.appendChild(buildFiche(d, false));
+  } else if (mode === 'veille') {
+    pr.appendChild(buildVeille(d, true));
   } else {
     pr.appendChild(el('h2', d.title + ' – cartes mémo', 'prt'));
     const g = el('div', null, 'pgrid');
@@ -106,7 +160,7 @@ function printDeck(d, mode) {
     pr.appendChild(g);
   }
   const old = document.title;
-  document.title = (d.title || 'fiche').replace(/[\\/:*?"<>|]/g, '') + (mode === 'cards' ? ' - cartes' : '');
+  document.title = (d.title || 'fiche').replace(/[\\/:*?"<>|]/g, '') + (mode === 'cards' ? ' - cartes' : mode === 'veille' ? ' - veille' : '');
   document.body.classList.add('printing');
   const done = () => { document.body.classList.remove('printing'); document.title = old; window.removeEventListener('afterprint', done); };
   window.addEventListener('afterprint', done);

@@ -212,3 +212,18 @@ border:1px solid var(--grid);border-radius:10px;box-shadow:0 18px 34px -20px var
   .pc b{display:block;margin-bottom:6px}.pc span{color:#56618d}
   .prt{font-size:20pt;margin:0 0 12px}
 }
+
+/* ---------- veille de contrôle ---------- */
+.veille .chips span:first-child{background:var(--ink);color:var(--sheet)}
+.par{margin:6px 0 0;display:grid;gap:10px}
+.par div{line-height:1.45}
+.par dt{display:inline;font-weight:800;background:linear-gradient(transparent 55%,var(--hl) 55%,var(--hl) 92%,transparent 92%);padding:0 .25em 0 .05em}
+.par dd{display:inline;margin:0 0 0 .4em}
+.hint2{margin:2px 0 8px;color:var(--mute);font-size:.92rem;line-height:1.4}
+details.q{margin:8px 0;border:1.5px solid var(--grid);border-radius:8px;padding:10px 14px;background:var(--sheet);line-height:1.45}
+details.q summary{cursor:pointer;font-weight:700}
+details.q[open]{background:var(--postit);border-color:transparent}
+details.q p{margin:8px 0 0}
+.qa{margin:4px 0 0;padding-left:20px;line-height:1.5}
+.qa li{margin:0 0 8px}.qa span{color:var(--mute)}
+@media print{ .par dt{background:none;border-bottom:3px solid #ffe36b} }

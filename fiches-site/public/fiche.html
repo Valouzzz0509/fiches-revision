@@ -29,10 +29,12 @@
       <button data-t="fiche" class="on" role="tab">Fiche</button>
       <button data-t="cards" role="tab">Cartes</button>
       <button data-t="quiz" role="tab">Quiz</button>
+      <button data-t="veille" role="tab">Veille</button>
     </div>
     <div id="fiche"></div>
     <div id="cards" class="hide"></div>
     <div id="quiz" class="hide"></div>
+    <div id="veille" class="hide"></div>
     <div class="danger"><button type="button" id="del">Supprimer cette fiche</button></div>
   </div>
 </main>
@@ -50,9 +52,9 @@ else{
   document.title=deck.title+' – Carnet';
   $('view').classList.remove('hide');
   $('fiche').appendChild(buildFiche(deck,true,m=>printDeck(deck,m)));
-  startCards(); startQuiz();
+  startCards(); startQuiz(); drawVeille();
   const h=location.hash.replace('#','');
-  tab(['cards','quiz'].includes(h)?h:'fiche');
+  tab(['cards','quiz','veille'].includes(h)?h:'fiche');
 
   let armed=false;
   $('del').onclick=()=>{
@@ -62,7 +64,7 @@ else{
 }
 
 function tab(t){
-  ['fiche','cards','quiz'].forEach(x=>$(x).classList.toggle('hide',x!==t));
+  ['fiche','cards','quiz','veille'].forEach(x=>$(x).classList.toggle('hide',x!==t));
   document.querySelectorAll('#tabs button').forEach(b=>{const on=b.dataset.t===t;b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
 }
 $('tabs').onclick=e=>{ if(e.target.dataset.t) tab(e.target.dataset.t); };
@@ -91,6 +93,56 @@ function drawCard(){
   ok.onclick=()=>{ queue.shift(); known++; flipped=false; drawCard(); };
   r.append(ko,ok); c.appendChild(r);
   face.onclick=()=>{ flipped=!flipped; face.textContent=flipped?queue[0].a:queue[0].q; face.classList.toggle('back',flipped); r.classList.toggle('hide',!flipped); };
+}
+
+/* ---- veille de contrôle ---- */
+function drawVeille(note){
+  const c=$('veille'); c.textContent='';
+  if(deck.express){
+    c.appendChild(buildVeille(deck,false));
+    const bar=el('div',null,'dl');
+    const b1=el('button','Télécharger la veille (PDF)'); b1.onclick=()=>printDeck(deck,'veille');
+    const b2=el('button','Refaire la veille','ghost'); b2.onclick=()=>{deck.express=null; Store.update(deck); drawVeille();};
+    bar.append(b1,b2); c.appendChild(bar);
+    return;
+  }
+  const box=el('div',null,'card plain');
+  box.appendChild(el('h2','Veille de contrôle'));
+  box.appendChild(el('p','Une version courte de ta fiche, à relire en 5 minutes avant un contrôle : l’essentiel, ce qu’il faut savoir par cœur, les pièges à éviter et un mini-test.'));
+  const codeRow=el('div',null,'row');
+  const codeBox=el('div'); codeBox.appendChild(el('label','Code d’accès')); codeBox.lastChild.setAttribute('for','vcode');
+  const codeIn=document.createElement('input'); codeIn.id='vcode'; codeIn.type='password'; codeIn.autocomplete='off'; codeIn.placeholder='Le même code que pour créer une fiche';
+  codeBox.appendChild(codeIn); codeRow.appendChild(codeBox);
+  if(pref('code')) codeRow.classList.add('hide');
+  box.appendChild(codeRow);
+  const row=el('div',null,'row');
+  const btn=el('button','Préparer ma veille'); btn.type='button'; row.appendChild(btn); box.appendChild(row);
+  const st=el('div',null,'status hide'); st.setAttribute('role','status'); st.appendChild(el('i')); const stTxt=el('span','Lecture de ta fiche…'); st.appendChild(stTxt); box.appendChild(st);
+  const err=el('div',note||'','err'); err.setAttribute('role','alert'); box.appendChild(err);
+  c.appendChild(box);
+
+  btn.onclick=async()=>{
+    const code=(codeIn.value.trim()||pref('code'));
+    err.textContent='';
+    if(!code){ codeRow.classList.remove('hide'); err.textContent='Entre ton code d’accès.'; codeIn.focus(); return; }
+    btn.disabled=true; st.classList.remove('hide');
+    const msgs=['Lecture de ta fiche…','Choix de l’essentiel…','Préparation du mini-test…'];
+    let i=0; stTxt.textContent=msgs[0];
+    const timer=setInterval(()=>{ i=Math.min(i+1,msgs.length-1); stTxt.textContent=msgs[i]; },4000);
+    try{
+      const r=await fetch('/api/express',{method:'POST',headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({code,matiere:deck.matiere||'',niveau:deck.niveau||'',
+          fiche:{title:deck.title,sections:deck.sections,keywords:deck.keywords,cards:deck.cards}})});
+      const d=await r.json().catch(()=>({error:'Réponse invalide du serveur.'}));
+      if(r.status===401){ codeRow.classList.remove('hide'); throw new Error('Code d’accès incorrect.'); }
+      if(!r.ok) throw new Error(d.error||'Erreur serveur');
+      if(!d.essentiel||!d.par_coeur) throw new Error('Réponse inattendue, réessaie.');
+      pref('code',code);
+      deck.express=d; Store.update(deck);
+      clearInterval(timer); drawVeille(); return;
+    }catch(e){ err.textContent=e.message||'Erreur, réessaie.'; }
+    clearInterval(timer); st.classList.add('hide'); btn.disabled=false;
+  };
 }
 
 /* ---- quiz ---- */
