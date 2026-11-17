@@ -38,6 +38,11 @@
     <datalist id="mats"><option>Histoire-géographie</option><option>Français</option><option>Mathématiques</option><option>Physique-chimie</option><option>SVT</option><option>Philosophie</option><option>SES</option><option>HGGSP</option><option>Anglais</option><option>Espagnol</option><option>NSI</option></datalist>
 
     <div class="row">
+      <div><label for="obj">Je prépare</label>
+        <select id="obj"><option>Juste réviser</option><option>Un contrôle</option><option>Le bac ou un examen</option><option>Un oral</option></select></div>
+    </div>
+
+    <div class="row">
       <div><label for="code">Code d’accès</label><input id="code" type="password" autocomplete="off" placeholder="Demande-le à la personne qui t’a donné le lien"></div>
     </div>
 
@@ -57,6 +62,7 @@ const MSGS=['Lecture de ton cours…','Repérage des notions importantes…','R�
 /* valeurs mémorisées */
 $('mat').value=pref('mat'); $('code').value=pref('code');
 if(pref('niv')) $('niv').value=pref('niv'); else $('niv').value='Terminale';
+if(pref('obj')) $('obj').value=pref('obj');
 
 async function shrink(file){
   const bm=await createImageBitmap(file); const k=Math.min(1,1400/Math.max(bm.width,bm.height));
@@ -91,7 +97,7 @@ $('form').onsubmit=async ev=>{
   ev.preventDefault();
   const text=$('txt').value.trim(); $('err').textContent='';
   if(!photos.length && text.length<80){ $('err').textContent='Ajoute une photo de ton cours, ou colle un peu plus de texte.'; return; }
-  pref('mat',$('mat').value.trim()); pref('niv',$('niv').value); pref('code',$('code').value.trim());
+  pref('mat',$('mat').value.trim()); pref('niv',$('niv').value); pref('obj',$('obj').value); pref('code',$('code').value.trim());
 
   const btn=$('go'); btn.disabled=true;
   const st=$('status'), tx=$('statusTxt'); st.classList.remove('hide');
@@ -100,12 +106,12 @@ $('form').onsubmit=async ev=>{
   try{
     const imgs=await Promise.all(photos.map(p=>b64(p.blob)));
     const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({text:text.slice(0,12000),images:imgs,matiere:$('mat').value,niveau:$('niv').value,code:$('code').value.trim()})});
+      body:JSON.stringify({text:text.slice(0,12000),images:imgs,matiere:$('mat').value,niveau:$('niv').value,objectif:$('obj').value,code:$('code').value.trim()})});
     const d=await r.json().catch(()=>({error:'Réponse invalide du serveur.'}));
     if(!r.ok) throw new Error(d.error||'Erreur serveur');
     if(!d||!d.sections||!d.cards) throw new Error('Réponse inattendue, réessaie.');
     d.id='f'+Date.now().toString(36); d.createdAt=Date.now();
-    d.matiere=$('mat').value.trim(); d.niveau=$('niv').value;
+    d.matiere=$('mat').value.trim(); d.niveau=$('niv').value; d.objectif=$('obj').value;
     Store.add(d);
     location.href='fiche.html?id='+d.id;
     return;
