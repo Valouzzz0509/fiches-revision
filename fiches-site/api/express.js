@@ -1,5 +1,6 @@
 // Fonction serverless Vercel : crée la « veille de contrôle » (version courte) à partir d'une fiche existante.
 // Elle n'utilise que le texte de la fiche, pas les photos : c'est rapide et peu coûteux.
+const { guard } = require('../lib/auth');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
 
 const str = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
@@ -58,14 +59,15 @@ function clean(d) {
 
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée.' });
-  const { fiche, matiere = '', niveau = '', code = '' } = req.body || {};
+  const { fiche, matiere = '', niveau = '' } = req.body || {};
 
-  if (process.env.ACCESS_CODE && code !== process.env.ACCESS_CODE)
-    return res.status(401).json({ error: 'Code d’accès incorrect.' });
   if (!fiche || typeof fiche !== 'object' || !arr(fiche.sections).length)
     return res.status(400).json({ error: 'Fiche manquante.' });
   if (JSON.stringify(fiche).length > 40000)
     return res.status(400).json({ error: 'Fiche trop longue.' });
+
+  const g = await guard(req, res, 'veille');   // vérifie le compte et la limite du jour
+  if (!g) return;
 
   let stop = '', raw = '';
   try {
@@ -83,7 +85,7 @@ module.exports = async (req, res) => {
       }),
     });
     const j = await r.json();
-    if (!r.ok) return res.status(502).json({ error: 'Erreur IA : ' + ((j.error && j.error.message) || r.status) });
+    if (!r.ok) { await g.refund(); return res.status(502).json({ error: 'Erreur IA : ' + ((j.error && j.error.message) || r.status) }); }
     stop = j.stop_reason || '';
     raw = (j.content || []).map((b) => b.text || '').join('');
     const a = raw.indexOf('{'), b = raw.lastIndexOf('}');
@@ -91,6 +93,7 @@ module.exports = async (req, res) => {
     return res.status(200).json(clean(JSON.parse(raw.slice(a, b + 1))));
   } catch (e) {
     console.error('express error:', e, 'stop:', stop, 'raw:', raw.slice(0, 500));
+    await g.refund();
     return res.status(500).json({ error: 'Impossible de préparer la veille (' + e.message + (stop ? ', fin : ' + stop : '') + '). Réessaie.' });
   }
 };

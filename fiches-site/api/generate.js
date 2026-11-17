@@ -1,5 +1,6 @@
 // Fonction serverless Vercel : la clé API reste ici, jamais dans la page.
 // Les consignes données à l'IA dépendent de la classe, de la matière et de l'objectif.
+const { guard } = require('../lib/auth');
 const MODEL = process.env.ANTHROPIC_MODEL || 'claude-sonnet-5-5';
 
 const norm = (s) => String(s || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').trim();
@@ -172,10 +173,8 @@ function clean(d) {
 /* ---------- fonction ---------- */
 module.exports = async (req, res) => {
   if (req.method !== 'POST') return res.status(405).json({ error: 'Méthode non autorisée.' });
-  const { text = '', images = [], matiere = '', niveau = '', objectif = '', code = '' } = req.body || {};
+  const { text = '', images = [], matiere = '', niveau = '', objectif = '' } = req.body || {};
 
-  if (process.env.ACCESS_CODE && code !== process.env.ACCESS_CODE)
-    return res.status(401).json({ error: 'Code d’accès incorrect.' });
   if (!Array.isArray(images) || images.length > 5)
     return res.status(400).json({ error: '5 photos maximum.' });
   if (!images.length && String(text).trim().length < 80)
@@ -188,6 +187,9 @@ module.exports = async (req, res) => {
     objectif: String(objectif).slice(0, 40),
     nbImages: images.length,
   });
+  const g = await guard(req, res, 'fiche');   // vérifie le compte et la limite du jour
+  if (!g) return;
+
   const content = [
     ...images.map((data) => ({ type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data } })),
     { type: 'text', text: prompt },
@@ -205,7 +207,7 @@ module.exports = async (req, res) => {
       body: JSON.stringify({ model: MODEL, max_tokens: 8000, messages: [{ role: 'user', content }] }),
     });
     const j = await r.json();
-    if (!r.ok) return res.status(502).json({ error: 'Erreur IA : ' + ((j.error && j.error.message) || r.status) });
+    if (!r.ok) { await g.refund(); return res.status(502).json({ error: 'Erreur IA : ' + ((j.error && j.error.message) || r.status) }); }
     stop = j.stop_reason || '';
     raw = (j.content || []).map((b) => b.text || '').join('');
     const a = raw.indexOf('{'), b = raw.lastIndexOf('}');
@@ -213,6 +215,7 @@ module.exports = async (req, res) => {
     return res.status(200).json(clean(JSON.parse(raw.slice(a, b + 1))));
   } catch (e) {
     console.error('generate error:', e, 'stop:', stop, 'raw:', raw.slice(0, 500));
+    await g.refund();
     return res.status(500).json({ error: 'Impossible de générer la fiche (' + e.message + (stop ? ', fin : ' + stop : '') + '). Réessaie.' });
   }
 };
