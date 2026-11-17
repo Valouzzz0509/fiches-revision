@@ -97,7 +97,7 @@ function drawCard(){
   const r=el('div',null,'row'); r.classList.add('hide');
   const ko=el('button','À revoir','ko'), ok=el('button','Je savais','ok');
   ko.onclick=()=>{ queue.push(queue.shift()); flipped=false; drawCard(); };
-  ok.onclick=()=>{ queue.shift(); known++; flipped=false; drawCard(); };
+  ok.onclick=()=>{ queue.shift(); known++; flipped=false; gain('card',1); drawCard(); };
   r.append(ko,ok); c.appendChild(r);
   face.onclick=()=>{ flipped=!flipped; face.textContent=flipped?queue[0].a:queue[0].q; face.classList.toggle('back',flipped); r.classList.toggle('hide',!flipped); };
 }
@@ -131,6 +131,7 @@ function drawVeille(){
       const d=await api('/api/express',{matiere:deck.matiere||'',niveau:deck.niveau||'',
         fiche:{title:deck.title,sections:deck.sections,keywords:deck.keywords,cards:deck.cards}});
       if(!d.essentiel||!d.par_coeur) throw new Error('Réponse inattendue, réessaie.');
+      const gm=d._game; delete d._game; if(gm&&gm.gained) toast(gainMsg(gm,'pour ta veille'));
       deck.express=d; Store.update(deck).catch(()=>{});
       clearInterval(timer); drawVeille(); return;
     }catch(e){
@@ -142,11 +143,13 @@ function drawVeille(){
 }
 
 /* ---- quiz ---- */
-function startQuiz(){ qi=0; score=0; drawQ(); }
+let qDone=false;
+function startQuiz(){ qi=0; score=0; qDone=false; drawQ(); }
 function drawQ(){
   const c=$('quiz'); c.textContent=''; const qs=deck.quiz||[];
   if(!qs.length){ c.appendChild(el('div','Cette fiche n’a pas de quiz.','card plain')); return; }
   if(qi>=qs.length){
+    if(!qDone){ qDone=true; if(score>0) gain('quiz',score); }
     const box=el('div',null,'card plain'); box.appendChild(el('h2','Score : '+score+' / '+qs.length));
     box.appendChild(el('p',score===qs.length?'Sans faute !':'Relis les parties où tu t’es trompé, puis refais le quiz.'));
     const b=el('button','Refaire le quiz'); b.onclick=startQuiz; box.appendChild(b); c.appendChild(box); return;

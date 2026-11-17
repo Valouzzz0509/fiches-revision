@@ -144,20 +144,21 @@ function chrome(active) {
     '<header class="top"><div class="wrap bar">' +
     '<a class="brand" href="index.html">' + LOGO + '<span>' + SITE + '</span></a>' +
     '<nav aria-label="Navigation principale">' +
-    (inn ? '<a href="fiches.html"' + cur('fiches') + '>Mes fiches</a>' : '<a href="connexion.html"' + cur('connexion') + '>Se connecter</a>') +
-    '<a class="btn sm" href="creer.html"' + cur('creer') + '>Créer une fiche</a>' +
+    (inn ? '<a href="fiches.html"' + cur('fiches') + '>Mes fiches</a><a href="progres.html"' + cur('progres') + '>Progrès</a>' : '<a href="connexion.html"' + cur('connexion') + '>Se connecter</a>') +
+    '<a class="btn sm" href="creer.html"' + cur('creer') + '>Créer<span class="lg"> une fiche</span></a>' +
     '</nav></div></header>';
   const ft = $('site-footer');
   if (ft) ft.innerHTML =
     '<footer class="foot"><div class="wrap">' +
     '<div><b>' + SITE + '</b><p>Des fiches de révision, des cartes mémo et un quiz à partir d’une photo de ton cours.</p></div>' +
     '<nav aria-label="Pied de page"><a href="index.html">Accueil</a><a href="creer.html">Créer une fiche</a>' +
-    (inn ? '<a href="fiches.html">Mes fiches</a><a href="compte.html">Mon compte</a>' : '<a href="connexion.html">Se connecter</a>') +
+    (inn ? '<a href="fiches.html">Mes fiches</a><a href="progres.html">Progrès</a><a href="compte.html">Mon compte</a>' : '<a href="connexion.html">Se connecter</a>') +
     '<a href="confidentialite.html">Confidentialité</a></nav>' +
     '<p class="small">' + SITE + ' utilise une IA, qui peut se tromper. Relis toujours ta fiche avant de l’apprendre. ' +
     'Ton adresse email et tes fiches sont enregistrées sur ton compte pour que tu les retrouves sur tous tes appareils. ' +
     'Tes photos sont envoyées à l’IA pour créer la fiche et ne sont pas conservées par le site.</p>' +
     '</div></footer>';
+  showFlash();
   /* on vérifie la vraie situation, et on corrige l'en-tête si elle a changé */
   getSession().then(s => {
     const real = !!s;
@@ -265,4 +266,39 @@ function printDeck(d, mode) {
   const done = () => { document.body.classList.remove('printing'); document.title = old; window.removeEventListener('afterprint', done); };
   window.addEventListener('afterprint', done);
   setTimeout(() => window.print(), 60);
+}
+
+/* ================= jeu : points, niveaux, série ================= */
+const NIVEAUX = [[0, 'Débutant'], [100, 'Curieux'], [300, 'Studieux'], [700, 'Appliqué'], [1500, 'Expert'], [3000, 'Maître']];
+function niveau(p) {
+  let i = 0; NIVEAUX.forEach((n, k) => { if (p >= n[0]) i = k; });
+  const cur = NIVEAUX[i], nxt = NIVEAUX[i + 1] || null;
+  return { n: i + 1, nom: cur[1], suivant: nxt ? nxt[1] : null, reste: nxt ? nxt[0] - p : 0, pct: nxt ? Math.min(100, Math.round((p - cur[0]) / (nxt[0] - cur[0]) * 100)) : 100 };
+}
+const FLAME = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2c1 3.5 5 5.6 5 10.2A5 5 0 0 1 12 17.4a5 5 0 0 1-5-5.2c0-2 1-3.3 2-4.3.2 1.4.8 2.2 1.6 2.6C10.3 7.6 10.6 4.6 12 2z" fill="#ff7a1a"/><path d="M12 11c.7 1.4 2.2 2.1 2.2 3.8a2.2 2.2 0 0 1-4.4 0c0-.9.5-1.6 1-2.2.3.5.6.8 1 .9-.1-.9 0-1.6.2-2.5z" fill="#ffd23f"/></svg>';
+
+/* petit message qui apparaît en bas de l'écran */
+function toast(msg) {
+  let t = $('toast');
+  if (!t) { t = el('div', null, 'toast'); t.id = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('show'), 3200);
+}
+/* message à afficher sur la page suivante */
+function flash(msg) { try { sessionStorage.setItem('flash', msg); } catch (e) {} }
+function showFlash() {
+  let m = ''; try { m = sessionStorage.getItem('flash') || ''; sessionStorage.removeItem('flash'); } catch (e) {}
+  if (m) toast(m);
+}
+function gainMsg(g, quoi) {
+  if (!g || !g.gained) return '';
+  let m = '+' + g.gained + ' point' + (g.gained > 1 ? 's' : '') + (quoi ? ' ' + quoi : '');
+  if (g.bonus && g.streak > 1) m += ' · ' + g.streak + ' jours de suite !';
+  else if (g.bonus) m += ' · c’est parti pour ta série !';
+  return m;
+}
+/* déclare une activité (cartes, quiz) ; le serveur décide des points */
+async function gain(kind, n) {
+  try { const d = await api('/api/game', { action: 'activity', kind, n }); const m = gainMsg(d.game); if (m) toast(m); return d.game; }
+  catch (e) { return null; }
 }

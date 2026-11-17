@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Progrès – Carnet</title>
+<meta name="theme-color" content="#2c43d0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap narrow">
+  <div class="page">
+    <h1>Progrès</h1>
+    <p class="sub">Gagne des points en révisant, garde ta série de jours et grimpe dans le classement.</p>
+  </div>
+
+  <div class="status" id="loading" role="status"><i></i><span>Chargement…</span></div>
+  <div class="err" id="err" role="alert"></div>
+
+  <div id="view" class="hide">
+    <section class="card plain">
+      <div class="lvl">
+        <div class="num" id="lvNum">1</div>
+        <div><h2 id="lvName">Débutant</h2><p id="lvPts"></p></div>
+      </div>
+      <div class="bigprog" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="lvBar"><i id="lvFill"></i></div>
+      <p class="muted" id="lvNext"></p>
+      <div class="tiles">
+        <div class="tile"><b><span id="stStreak">0</span></b><span id="stStreakLbl">jour de suite</span></div>
+        <div class="tile"><b id="stToday">0</b><span>points aujourd’hui</span></div>
+        <div class="tile"><b id="stWeek">0</b><span>points cette semaine</span></div>
+      </div>
+      <p class="small-note" id="how">Fiche créée : 20 points · veille : 10 · carte sue : 1 · bonne réponse au quiz : 2 · 5 points bonus à ta première activité du jour. Il y a un maximum de points par jour pour chaque activité.</p>
+    </section>
+
+    <section class="card plain">
+      <h2>Classement de la semaine</h2>
+      <p class="muted" id="rankInfo">Le classement repart de zéro chaque lundi. Seuls les pseudos sont visibles.</p>
+      <ol class="rank" id="rank"></ol>
+      <p class="muted hide" id="rankEmpty">Personne dans le classement pour l’instant. Sois le premier !</p>
+    </section>
+
+    <section class="card plain">
+      <h2>Mon pseudo</h2>
+      <form id="pf" novalidate>
+        <div class="field">
+          <label for="pseudo">Pseudo</label>
+          <input id="pseudo" maxlength="16" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ex. Lea_12">
+          <p class="small-note">3 à 16 caractères : lettres, chiffres, _ ou -. N’utilise pas ton vrai nom ni de coordonnées.</p>
+        </div>
+        <label class="check"><input type="checkbox" id="ranking"><span>Je veux apparaître dans le classement de la semaine. Les autres verront seulement mon pseudo, mes points et ma série.</span></label>
+        <div class="row"><button id="pgo" type="submit">Enregistrer</button></div>
+        <div class="okline hide" id="pok" role="status">Enregistré.</div>
+        <div class="err" id="perr" role="alert"></div>
+      </form>
+    </section>
+
+    <section class="card plain">
+      <h2>Rappels</h2>
+      <p class="muted" id="rmsg">Reçois une notification en fin de journée si tu n’as pas encore révisé, pour garder ta série.</p>
+      <div class="row"><button id="rbtn" type="button" class="hide">Activer les rappels</button></div>
+      <div class="err" id="rerr" role="alert"></div>
+    </section>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="common.js"></script>
+<script>
+chrome('progres');
+let ST=null;
+
+function plural(n,s,p){ return n+' '+(n>1?p:s); }
+function drawState(s){
+  ST=s;
+  const lv=niveau(s.points);
+  $('lvNum').textContent=lv.n; $('lvName').textContent=lv.nom;
+  $('lvPts').textContent=plural(s.points,'point','points')+' au total';
+  $('lvFill').style.width=lv.pct+'%'; $('lvBar').setAttribute('aria-valuenow',lv.pct);
+  $('lvNext').textContent=lv.suivant?('Encore '+plural(lv.reste,'point','points')+' pour devenir '+lv.suivant+'.'):'Tu as atteint le niveau maximum. Bravo !';
+  const sk=$('stStreak'); sk.innerHTML=s.streak>0?FLAME:''; sk.appendChild(document.createTextNode(s.streak));
+  $('stStreakLbl').textContent=(s.streak>1?'jours':'jour')+' de suite'+(s.best>s.streak?' · record '+s.best:'');
+  $('stToday').textContent=s.today; $('stWeek').textContent=s.week;
+  $('pseudo').value=s.pseudo||''; $('ranking').checked=!!s.ranking;
+}
+function drawBoard(list){
+  const ol=$('rank'); ol.textContent='';
+  $('rankEmpty').classList.toggle('hide',list.length>0);
+  list.forEach(r=>{
+    const li=el('li',null,(ST&&ST.ranking&&ST.pseudo&&r.pseudo.toLowerCase()===ST.pseudo.toLowerCase())?'me':'');
+    li.appendChild(el('span',r.pseudo,'nm'));
+    if(r.streak>0){ const f=el('span',null,'fl'); f.innerHTML=FLAME; f.appendChild(document.createTextNode(' '+r.streak)); f.title='Série de '+r.streak+' jours'; li.appendChild(f); }
+    li.appendChild(el('span',r.pts+' pts','pt'));
+    ol.appendChild(li);
+  });
+  if(ST&&ST.ranking&&ST.rank&&ST.rank>list.length){
+    const li=el('li',null,'me'); li.appendChild(el('span',ST.pseudo+' (toi · '+ST.rank+'e)','nm')); li.appendChild(el('span',ST.week+' pts','pt')); ol.appendChild(li);
+  }
+}
+
+(async()=>{
+  const s=await gate(); if(!s) return;
+  try{
+    const d=await api('/api/game',{action:'board'});
+    $('loading').classList.add('hide'); $('view').classList.remove('hide');
+    drawState(d.state); drawBoard(d.board);
+  }catch(e){
+    if(e.status===401) return;
+    $('loading').classList.add('hide');
+    $('err').textContent=e.message||'Impossible de charger tes progrès. Réessaie dans un instant.';
+    return;
+  }
+  initPush();
+})();
+
+/* ---- pseudo ---- */
+$('pf').onsubmit=async ev=>{
+  ev.preventDefault();
+  const err=$('perr'); err.textContent=''; $('pok').classList.add('hide');
+  const pseudo=$('pseudo').value.trim(), ranking=$('ranking').checked;
+  if(ranking&&!pseudo){ err.textContent='Choisis un pseudo pour apparaître dans le classement.'; $('pseudo').focus(); return; }
+  if(pseudo&&!/^[A-Za-z0-9_-]{3,16}$/.test(pseudo)){ err.textContent='Le pseudo doit faire 3 à 16 caractères : lettres, chiffres, _ ou -.'; $('pseudo').focus(); return; }
+  $('pgo').disabled=true;
+  try{
+    const d=await api('/api/game',{action:'pseudo',pseudo,ranking});
+    drawState(d.state);
+    const b=await api('/api/game',{action:'board'}); drawState(b.state); drawBoard(b.board);
+    $('pok').classList.remove('hide');
+  }catch(e){ err.textContent=e.message||'Erreur, réessaie.'; }
+  $('pgo').disabled=false;
+};
+
+/* ---- rappels (notifications) ---- */
+function b64url(s){ const p='='.repeat((4-s.length%4)%4); const r=atob((s+p).replace(/-/g,'+').replace(/_/g,'/')); return Uint8Array.from(r,c=>c.charCodeAt(0)); }
+let REG=null, SUB=null;
+async function initPush(){
+  const msg=$('rmsg'), btn=$('rbtn');
+  const ios=/iphone|ipad|ipod/i.test(navigator.userAgent)&&!window.navigator.standalone;
+  if(!CONFIG||!CONFIG.vapid){ msg.textContent='Les rappels ne sont pas disponibles pour le moment.'; return; }
+  if(!('serviceWorker' in navigator)||!('PushManager' in window)||!('Notification' in window)){
+    msg.textContent=ios?'Sur iPhone, ajoute d’abord Carnet à ton écran d’accueil (Partager, puis « Sur l’écran d’accueil »), ouvre-le depuis l’écran d’accueil, puis reviens ici pour activer les rappels.':'Ton navigateur ne permet pas les rappels.';
+    return;
+  }
+  try{ REG=await navigator.serviceWorker.register('sw.js'); SUB=await REG.pushManager.getSubscription(); }
+  catch(e){ msg.textContent='Les rappels ne sont pas disponibles sur ce navigateur.'; return; }
+  drawPush(); btn.classList.remove('hide');
+}
+function drawPush(){
+  const on=!!SUB&&Notification.permission==='granted';
+  $('rbtn').textContent=on?'Désactiver les rappels':'Activer les rappels';
+  $('rbtn').classList.toggle('ghost',on);
+  $('rmsg').textContent=on?'Les rappels sont activés sur cet appareil : tu recevras une notification en fin de journée si tu n’as pas encore révisé.':'Reçois une notification en fin de journée si tu n’as pas encore révisé, pour garder ta série.';
+}
+$('rbtn').onclick=async()=>{
+  const err=$('rerr'); err.textContent=''; $('rbtn').disabled=true;
+  try{
+    if(SUB&&Notification.permission==='granted'){
+      await api('/api/push',{action:'unsubscribe',endpoint:SUB.endpoint}); await SUB.unsubscribe(); SUB=null;
+    }else{
+      const perm=await Notification.requestPermission();
+      if(perm!=='granted') throw new Error('Les notifications sont bloquées. Autorise-les dans les réglages de ton navigateur, puis réessaie.');
+      SUB=SUB||await REG.pushManager.subscribe({userVisibleOnly:true,applicationServerKey:b64url(CONFIG.vapid)});
+      await api('/api/push',{action:'subscribe',sub:SUB.toJSON()});
+    }
+    drawPush();
+  }catch(e){ err.textContent=e.message||'Impossible de modifier les rappels. Réessaie.'; }
+  $('rbtn').disabled=false;
+};
+</script>
+</body>
+</html>

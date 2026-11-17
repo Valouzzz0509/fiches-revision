@@ -110,6 +110,7 @@ $('form').onsubmit=async ev=>{
     const imgs=await Promise.all(photos.map(p=>b64(p.blob)));
     const d=await api('/api/generate',{text:text.slice(0,12000),images:imgs,matiere:$('mat').value,niveau:$('niv').value,objectif:$('obj').value});
     if(!d||!d.sections||!d.cards) throw new Error('Réponse inattendue, réessaie.');
+    const gm=d._game; delete d._game; if(gm&&gm.gained) flash(gainMsg(gm,'pour ta fiche'));
     d.id=newId(); d.createdAt=Date.now();
     d.matiere=$('mat').value.trim(); d.niveau=$('niv').value; d.objectif=$('obj').value;
     try{ await Store.add(d); }
