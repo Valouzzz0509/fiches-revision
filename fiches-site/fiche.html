@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ma fiche – Carnet</title>
+<meta name="theme-color" content="#2c43d0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap narrow">
+  <p class="crumbs"><a href="fiches.html">‹ Mes fiches</a></p>
+
+  <div class="status" id="loading" role="status"><i></i><span>Chargement de ta fiche…</span></div>
+
+  <div id="missing" class="card plain empty hide">
+    <h2>Fiche introuvable</h2>
+    <p>Elle a peut-être été supprimée, ou elle appartient à un autre compte.</p>
+    <a class="btn" href="fiches.html">Voir mes fiches</a>
+  </div>
+
+  <div id="view" class="hide">
+    <div class="tabs" id="tabs" role="tablist">
+      <button data-t="fiche" class="on" role="tab">Fiche</button>
+      <button data-t="cards" role="tab">Cartes</button>
+      <button data-t="quiz" role="tab">Quiz</button>
+      <button data-t="veille" role="tab">Veille</button>
+    </div>
+    <div id="fiche"></div>
+    <div id="cards" class="hide"></div>
+    <div id="quiz" class="hide"></div>
+    <div id="veille" class="hide"></div>
+    <div class="danger"><button type="button" id="del">Supprimer cette fiche</button></div>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="common.js"></script>
+<script>
+chrome('fiches');
+let deck=null,queue=[],known=0,flipped=false,qi=0,score=0;
+
+(async()=>{
+  const s=await gate(); if(!s) return;
+  const id=new URLSearchParams(location.search).get('id');
+  deck=id?await Store.get(id):null;
+  $('loading').classList.add('hide');
+  if(!deck){ $('missing').classList.remove('hide'); return; }
+  document.title=deck.title+' – Carnet';
+  $('view').classList.remove('hide');
+  $('fiche').appendChild(buildFiche(deck,true,m=>printDeck(deck,m)));
+  startCards(); startQuiz(); drawVeille();
+  const h=location.hash.replace('#','');
+  tab(['cards','quiz','veille'].includes(h)?h:'fiche');
+
+  let armed=false;
+  $('del').onclick=async()=>{
+    if(!armed){ armed=true; $('del').textContent='Confirmer la suppression'; $('del').style.color='var(--ko)'; return; }
+    $('del').disabled=true;
+    try{ await Store.remove(deck.id); }catch(e){}
+    location.href='fiches.html';
+  };
+})();
+
+function tab(t){
+  ['fiche','cards','quiz','veille'].forEach(x=>$(x).classList.toggle('hide',x!==t));
+  document.querySelectorAll('#tabs button').forEach(b=>{const on=b.dataset.t===t;b.classList.toggle('on',on);b.setAttribute('aria-selected',on)});
+}
+$('tabs').onclick=e=>{ if(e.target.dataset.t) tab(e.target.dataset.t); };
+
+/* ---- cartes mémo ---- */
+function startCards(){ queue=shuffle(deck.cards||[]); known=0; flipped=false; drawCard(); }
+function drawCard(){
+  const c=$('cards'); c.textContent='';
+  const total=(deck.cards||[]).length;
+  if(!total){ c.appendChild(el('div','Cette fiche n’a pas de cartes.','card plain')); return; }
+  if(!queue.length){
+    const box=el('div',null,'card plain'); box.appendChild(el('h2','Bravo, tu as tout passé en revue !'));
+    box.appendChild(el('p','Recommence pour consolider, ou télécharge les cartes pour les imprimer.'));
+    const row=el('div',null,'cta');
+    const b=el('button','Recommencer'); b.onclick=startCards;
+    const d2=el('button','Télécharger les cartes (PDF)','ghost'); d2.onclick=()=>printDeck(deck,'cards');
+    row.append(b,d2); box.appendChild(row); c.appendChild(box); return;
+  }
+  const m=el('div',null,'meta2'); m.appendChild(el('span',known+' / '+total+' sues')); m.appendChild(el('span',queue.length+' restantes')); c.appendChild(m);
+  const p=el('div',null,'prog'); const i=el('i'); i.style.width=(known/total*100)+'%'; p.appendChild(i); c.appendChild(p);
+  const fl=el('div',null,'flash'); const face=el('button',queue[0].q,'face'); face.type='button'; fl.appendChild(face); c.appendChild(fl);
+  c.appendChild(el('p','Touche la carte pour voir la réponse','hint'));
+  const r=el('div',null,'row'); r.classList.add('hide');
+  const ko=el('button','À revoir','ko'), ok=el('button','Je savais','ok');
+  ko.onclick=()=>{ queue.push(queue.shift()); flipped=false; drawCard(); };
+  ok.onclick=()=>{ queue.shift(); known++; flipped=false; gain('card',1); drawCard(); };
+  r.append(ko,ok); c.appendChild(r);
+  face.onclick=()=>{ flipped=!flipped; face.textContent=flipped?queue[0].a:queue[0].q; face.classList.toggle('back',flipped); r.classList.toggle('hide',!flipped); };
+}
+
+/* ---- veille de contrôle ---- */
+function drawVeille(){
+  const c=$('veille'); c.textContent='';
+  if(deck.express){
+    c.appendChild(buildVeille(deck,false));
+    const bar=el('div',null,'dl');
+    const b1=el('button','Télécharger la veille (PDF)'); b1.onclick=()=>printDeck(deck,'veille');
+    const b2=el('button','Refaire la veille','ghost'); b2.onclick=()=>{deck.express=null; Store.update(deck).catch(()=>{}); drawVeille();};
+    bar.append(b1,b2); c.appendChild(bar);
+    return;
+  }
+  const box=el('div',null,'card plain');
+  box.appendChild(el('h2','Veille de contrôle'));
+  box.appendChild(el('p','Une version courte de ta fiche, à relire en 5 minutes avant un contrôle : l’essentiel, ce qu’il faut savoir par cœur, les pièges à éviter et un mini-test.'));
+  const row=el('div',null,'row');
+  const btn=el('button','Préparer ma veille'); btn.type='button'; row.appendChild(btn); box.appendChild(row);
+  const st=el('div',null,'status hide'); st.setAttribute('role','status'); st.appendChild(el('i')); const stTxt=el('span','Lecture de ta fiche…'); st.appendChild(stTxt); box.appendChild(st);
+  const err=el('div','','err'); err.setAttribute('role','alert'); box.appendChild(err);
+  c.appendChild(box);
+
+  btn.onclick=async()=>{
+    err.textContent=''; btn.disabled=true; st.classList.remove('hide');
+    const msgs=['Lecture de ta fiche…','Choix de l’essentiel…','Préparation du mini-test…'];
+    let i=0; stTxt.textContent=msgs[0];
+    const timer=setInterval(()=>{ i=Math.min(i+1,msgs.length-1); stTxt.textContent=msgs[i]; },4000);
+    try{
+      const d=await api('/api/express',{matiere:deck.matiere||'',niveau:deck.niveau||'',
+        fiche:{title:deck.title,sections:deck.sections,keywords:deck.keywords,cards:deck.cards}});
+      if(!d.essentiel||!d.par_coeur) throw new Error('Réponse inattendue, réessaie.');
+      const gm=d._game; delete d._game; if(gm&&gm.gained) toast(gainMsg(gm,'pour ta veille'));
+      deck.express=d; Store.update(deck).catch(()=>{});
+      clearInterval(timer); drawVeille(); return;
+    }catch(e){
+      if(e.status===401){ location.href='connexion.html?next='+encodeURIComponent(location.pathname.split('/').pop()+location.search+'#veille'); return; }
+      err.textContent=e.message||'Erreur, réessaie.';
+    }
+    clearInterval(timer); st.classList.add('hide'); btn.disabled=false;
+  };
+}
+
+/* ---- quiz ---- */
+let qDone=false;
+function startQuiz(){ qi=0; score=0; qDone=false; drawQ(); }
+function drawQ(){
+  const c=$('quiz'); c.textContent=''; const qs=deck.quiz||[];
+  if(!qs.length){ c.appendChild(el('div','Cette fiche n’a pas de quiz.','card plain')); return; }
+  if(qi>=qs.length){
+    if(!qDone){ qDone=true; if(score>0) gain('quiz',score); }
+    const box=el('div',null,'card plain'); box.appendChild(el('h2','Score : '+score+' / '+qs.length));
+    box.appendChild(el('p',score===qs.length?'Sans faute !':'Relis les parties où tu t’es trompé, puis refais le quiz.'));
+    const b=el('button','Refaire le quiz'); b.onclick=startQuiz; box.appendChild(b); c.appendChild(box); return;
+  }
+  const q=qs[qi], box=el('div',null,'card plain');
+  box.appendChild(el('div','Question '+(qi+1)+' / '+qs.length,'meta2'));
+  const h=el('h3',q.q); h.style.margin='8px 0'; box.appendChild(h);
+  const fb=el('p',''); let done=false; const opts=[];
+  q.options.forEach((o,i)=>{
+    const b=el('button',o,'opt'); b.type='button'; opts.push(b);
+    b.onclick=()=>{ if(done) return; done=true;
+      if(i===q.answer){score++; b.classList.add('good'); fb.textContent='Exact. '+(q.why||'');}
+      else{ b.classList.add('bad'); if(opts[q.answer]) opts[q.answer].classList.add('good'); fb.textContent='Pas tout à fait. '+(q.why||''); }
+      const n=el('button','Suivant'); n.onclick=()=>{qi++;drawQ()}; box.appendChild(n); };
+    box.appendChild(b);
+  });
+  box.appendChild(fb); c.appendChild(box);
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Confidentialité – Carnet</title>
+<meta name="theme-color" content="#2c43d0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap narrow">
+  <div class="page">
+    <h1>Confidentialité</h1>
+    <p class="sub">Ce que Carnet garde sur toi, pourquoi, et comment le supprimer.</p>
+  </div>
+
+  <article class="card plain legal">
+    <h2>Qui est derrière Carnet</h2>
+    <p>Carnet est un petit projet personnel qui aide à réviser à partir de photos de cours. Pour toute question sur tes données : <span id="contact">contacte la personne qui t’a donné le lien</span>.</p>
+
+    <h2>Les données enregistrées</h2>
+    <ul>
+      <li><b>Ton adresse email et ton mot de passe</b>, pour te connecter. Le mot de passe est enregistré sous une forme chiffrée : personne ne peut le lire.</li>
+      <li><b>Tes fiches</b> : le texte de la fiche, des cartes, du quiz et des veilles de contrôle, avec la matière et la classe que tu as indiquées.</li>
+      <li><b>Tes points, ta série de jours et ton niveau</b>, pour le jeu de progression.</li>
+      <li><b>Un pseudo</b> (facultatif). Si tu choisis d’apparaître dans le classement, les autres élèves voient ton pseudo, tes points de la semaine et ta série, jamais ton email.</li>
+      <li><b>Un identifiant de ton appareil pour les rappels</b>, seulement si tu actives les rappels. Tu peux les désactiver à tout moment depuis la page Progrès.</li>
+      <li><b>Un compteur d’utilisation par jour</b> (combien de fiches tu as créées), pour appliquer la limite quotidienne.</li>
+    </ul>
+
+    <h2>Tes photos</h2>
+    <p>Quand tu crées une fiche, tes photos et le texte de ton cours sont envoyés à une IA pour fabriquer la fiche. Carnet n’enregistre pas tes photos : seule la fiche créée est conservée.</p>
+
+    <h2>Où sont les données</h2>
+    <p>Carnet s’appuie sur trois services : un hébergeur pour le site (Vercel), une base de données pour les comptes et les fiches (Supabase) et un fournisseur d’IA (Anthropic). Ces prestataires peuvent traiter des données hors de l’Union européenne. Leurs propres conditions s’appliquent à leur partie.</p>
+
+    <h2>Combien de temps</h2>
+    <p>Tes données restent tant que ton compte existe. Si tu supprimes ton compte, ton adresse email, tes fiches, tes points et ton pseudo sont supprimés (il disparaît aussitôt du classement).</p>
+
+    <h2>Tes droits</h2>
+    <p>Depuis la page <a href="compte.html">Mon compte</a>, tu peux exporter toutes tes fiches et supprimer ton compte. Tu peux aussi nous écrire pour demander l’accès ou la correction de tes données.</p>
+
+    <h2>Si tu as moins de 15 ans</h2>
+    <p>Demande l’accord d’un parent ou d’un responsable avant de créer un compte.</p>
+
+    <h2>Cookies et suivi</h2>
+    <p>Pas de publicité et pas de suivi. Le site utilise seulement le stockage de ton navigateur pour te garder connecté et mémoriser tes choix (matière, classe). Choisis un pseudo qui ne permet pas de t’identifier : pas de nom complet, d’école ou de coordonnées.</p>
+  </article>
+</main>
+
+<div id="site-footer"></div>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script src="common.js"></script>
+<script>
+chrome('');
+sb().then(()=>{ if(CONFIG&&CONFIG.contact){ const a=document.createElement('a'); a.href='mailto:'+CONFIG.contact; a.textContent=CONFIG.contact; const c=$('contact'); c.textContent=''; c.appendChild(a); } }).catch(()=>{});
+</script>
+</body>
+</html>
