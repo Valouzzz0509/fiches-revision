@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Créer une fiche – Carnet</title>
+<meta name="theme-color" content="#2c43d0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap narrow">
+  <div class="page">
+    <h1>Créer une fiche</h1>
+    <p class="sub">Photographie ton cours, indique ta matière, et Carnet fait le reste.</p>
+  </div>
+
+  <form class="card" id="form" autocomplete="off">
+    <label for="pic">Ton cours en photo</label>
+    <input type="file" id="pic" accept="image/*" multiple class="hide">
+    <button class="drop" id="snap" type="button"><b>Photographier mon cours</b><small>Jusqu’à 5 pages, avec l’appareil photo ou depuis la galerie</small></button>
+    <div id="thumbs" class="thumbs"></div>
+
+    <label for="txt" style="margin-top:24px">Ou colle ton cours en texte <span class="opt-tag">(facultatif)</span></label>
+    <textarea id="txt" placeholder="Tu peux aussi coller du texte ici…"></textarea>
+
+    <div class="row">
+      <div><label for="mat">Matière</label><input id="mat" list="mats" placeholder="Ex : Histoire-géo, SVT, Maths…"></div>
+      <div><label for="niv">Classe</label>
+        <select id="niv"><option>Collège</option><option>Seconde</option><option>Première</option><option>Terminale</option><option>Études supérieures</option></select></div>
+    </div>
+    <datalist id="mats"><option>Histoire-géographie</option><option>Français</option><option>Mathématiques</option><option>Physique-chimie</option><option>SVT</option><option>Philosophie</option><option>SES</option><option>HGGSP</option><option>Anglais</option><option>Espagnol</option><option>NSI</option></datalist>
+
+    <div class="row">
+      <div><label for="code">Code d’accès</label><input id="code" type="password" autocomplete="off" placeholder="Demande-le à la personne qui t’a donné le lien"></div>
+    </div>
+
+    <div class="row"><button id="go" type="submit">Générer ma fiche</button></div>
+    <div class="status hide" id="status" role="status" aria-live="polite"><i></i><span id="statusTxt"></span></div>
+    <div class="err" id="err" role="alert"></div>
+  </form>
+</main>
+
+<div id="site-footer"></div>
+<script src="common.js"></script>
+<script>
+chrome('creer');
+let photos=[];
+const MSGS=['Lecture de ton cours…','Repérage des notions importantes…','Rédaction de la fiche…','Création des cartes mémo…','Préparation du quiz…','Dernières vérifications…'];
+
+/* valeurs mémorisées */
+$('mat').value=pref('mat'); $('code').value=pref('code');
+if(pref('niv')) $('niv').value=pref('niv'); else $('niv').value='Terminale';
+
+async function shrink(file){
+  const bm=await createImageBitmap(file); const k=Math.min(1,1400/Math.max(bm.width,bm.height));
+  const cv=document.createElement('canvas'); cv.width=Math.round(bm.width*k); cv.height=Math.round(bm.height*k);
+  cv.getContext('2d').drawImage(bm,0,0,cv.width,cv.height);
+  return new Promise(r=>cv.toBlob(r,'image/jpeg',0.7));
+}
+function b64(bl){return new Promise(r=>{const f=new FileReader();f.onload=()=>r(f.result.split(',')[1]);f.readAsDataURL(bl)})}
+
+function drawThumbs(){
+  const t=$('thumbs'); t.textContent='';
+  photos.forEach((p,i)=>{
+    const w=el('div',null,'th'), im=document.createElement('img'), x=el('button','✕','x');
+    im.src=p.url; im.alt='Page '+(i+1);
+    x.type='button'; x.setAttribute('aria-label','Retirer la page '+(i+1));
+    x.onclick=()=>{URL.revokeObjectURL(p.url);photos.splice(i,1);drawThumbs()};
+    w.append(im,x); t.appendChild(w);
+  });
+}
+$('snap').onclick=()=>$('pic').click();
+$('pic').onchange=async e=>{
+  $('err').textContent='';
+  for(const f of e.target.files){
+    if(photos.length>=5){ $('err').textContent='5 photos maximum par fiche.'; break; }
+    try{ const blob=await shrink(f); photos.push({blob,url:URL.createObjectURL(blob)}); }
+    catch(x){ $('err').textContent='Impossible de lire une des photos. Essaie avec une autre.'; }
+  }
+  e.target.value=''; drawThumbs();
+};
+
+$('form').onsubmit=async ev=>{
+  ev.preventDefault();
+  const text=$('txt').value.trim(); $('err').textContent='';
+  if(!photos.length && text.length<80){ $('err').textContent='Ajoute une photo de ton cours, ou colle un peu plus de texte.'; return; }
+  pref('mat',$('mat').value.trim()); pref('niv',$('niv').value); pref('code',$('code').value.trim());
+
+  const btn=$('go'); btn.disabled=true;
+  const st=$('status'), tx=$('statusTxt'); st.classList.remove('hide');
+  let i=0; tx.textContent=MSGS[0];
+  const timer=setInterval(()=>{ i=Math.min(i+1,MSGS.length-1); tx.textContent=MSGS[i]; },4500);
+  try{
+    const imgs=await Promise.all(photos.map(p=>b64(p.blob)));
+    const r=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({text:text.slice(0,12000),images:imgs,matiere:$('mat').value,niveau:$('niv').value,code:$('code').value.trim()})});
+    const d=await r.json().catch(()=>({error:'Réponse invalide du serveur.'}));
+    if(!r.ok) throw new Error(d.error||'Erreur serveur');
+    if(!d||!d.sections||!d.cards) throw new Error('Réponse inattendue, réessaie.');
+    d.id='f'+Date.now().toString(36); d.createdAt=Date.now();
+    d.matiere=$('mat').value.trim(); d.niveau=$('niv').value;
+    Store.add(d);
+    location.href='fiche.html?id='+d.id;
+    return;
+  }catch(e){
+    $('err').textContent=(e&&e.message)||'Erreur, réessaie.';
+  }
+  clearInterval(timer); st.classList.add('hide'); btn.disabled=false;
+};
+</script>
+</body>
+</html>

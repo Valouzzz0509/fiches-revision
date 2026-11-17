@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Mes fiches – Carnet</title>
+<meta name="theme-color" content="#2c43d0">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400..800&family=Caveat:wght@600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="site-header"></div>
+
+<main class="wrap narrow">
+  <div class="page">
+    <h1>Mes fiches</h1>
+    <p class="sub">Tes fiches sont enregistrées sur cet appareil. Si tu changes de téléphone ou d’ordinateur, tu ne les retrouveras pas.</p>
+  </div>
+  <ul class="lib" id="lib"></ul>
+  <div class="card plain empty hide" id="empty">
+    <h2>Aucune fiche pour l’instant</h2>
+    <p>Photographie un cours et ta première fiche apparaîtra ici.</p>
+    <a class="btn" href="creer.html">Créer une fiche</a>
+  </div>
+</main>
+
+<div id="site-footer"></div>
+<script src="common.js"></script>
+<script>
+chrome('fiches');
+
+function render(){
+  const lib=$('lib'); lib.textContent='';
+  const all=Store.all();
+  $('empty').classList.toggle('hide',all.length>0);
+  all.forEach(d=>{
+    const li=el('li',null,'item c'+colorIndex(d.matiere||d.title));
+    const h=el('h2'); const a=el('a',d.title||'Fiche sans titre'); a.href='fiche.html?id='+encodeURIComponent(d.id); h.appendChild(a);
+    const bits=[d.matiere,d.niveau,new Date(d.createdAt).toLocaleDateString('fr-FR',{day:'numeric',month:'long'})].filter(Boolean);
+    const pl=(n,w)=>n+' '+w+(n>1?'s':'');
+    const meta=el('span',bits.join(' · '),'meta'); const meta2=el('span',pl((d.sections||[]).length,'partie')+', '+pl((d.cards||[]).length,'carte')+', '+pl((d.quiz||[]).length,'question'),'meta');
+    const acts=el('div',null,'acts');
+    const open=el('a','Ouvrir','btn'); open.href=a.href;
+    const del=el('button','Supprimer','ghost'); del.type='button';
+    del.onclick=()=>{
+      acts.textContent='';
+      acts.appendChild(el('span','Supprimer cette fiche ?'));
+      const yes=el('button','Oui, supprimer','ko'); yes.type='button'; yes.onclick=()=>{Store.remove(d.id);render()};
+      const no=el('button','Annuler','ghost'); no.type='button'; no.onclick=render;
+      acts.append(yes,no);
+    };
+    acts.append(open,del);
+    li.append(h,meta,meta2,acts); lib.appendChild(li);
+  });
+}
+render();
+</script>
+</body>
+</html>
